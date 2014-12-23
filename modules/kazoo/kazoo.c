@@ -291,11 +291,11 @@ static int mod_child_init(int rank)
 
 
 	if (rank==PROC_MAIN) {
-		pid=fork_process(1, "AMQP Manager", 0);
+		pid=fork_process(1, "AMQP Manager", 1);
 		if (pid<0)
 			return -1; /* error */
 		if(pid==0){
-			kz_amqp_manager_loop(1);
+			kz_amqp_manager_loop(0);
 		}
 		else {
 			for(i=0; i < dbk_consumer_processes; i++) {
