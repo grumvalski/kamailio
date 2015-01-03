@@ -283,6 +283,12 @@ int scscf_fetch_impus(struct sip_msg* _m, udomain_t* _d, str* _i, str* dest) {
     int_str avp_name;
     unsigned short avp_type;
 
+	/* remove <> braces if there are */
+	if(_i->s[0]=='<' && _i->s[_i->len-1]=='>') {
+		_i->s++;
+		_i->len -= 2;
+	}
+	
 	LM_DBG("Fetching IMPUs for '%.*s'\n", _i->len, _i->s);
 
     if (dest->s && dest->len > 0) {
