@@ -113,12 +113,14 @@ static void mod_destroy(void);
 static int w_save(struct sip_msg* _m, char * _route, char* _d, char* mode, char* _cflags);
 static int w_assign_server_unreg(struct sip_msg* _m, char* _route, char* _d, char* _direction);
 static int w_lookup(struct sip_msg* _m, char* _d, char* _p2);
+static int w_scscf_fetch_impus(struct sip_msg* _m, char* _d, char* _uri, str* _dest);
 
 /*! \brief Fixup functions */
 static int domain_fixup(void** param, int param_no);
 static int assign_save_fixup3_async(void** param, int param_no);
 static int unreg_fixup(void** param, int param_no);
 static int fetchc_fixup(void** param, int param_no);
+static int fetch_impus_fixup(void** param, int param_no);
 /*! \brief Functions */
 static int add_sock_hdr(struct sip_msg* msg, char *str, char *foo);
 
@@ -201,6 +203,7 @@ static cmd_export_t cmds[] = {
     {"subscribe_to_reg", (cmd_function) subscribe_to_reg, 1, domain_fixup, 0, REQUEST_ROUTE},
     {"can_publish_reg", (cmd_function) can_publish_reg, 1, domain_fixup, 0, REQUEST_ROUTE},
     {"publish_reg", (cmd_function) publish_reg, 1, domain_fixup, 0, REQUEST_ROUTE},
+	{"scscf_fetch_impus", (cmd_function) w_scscf_fetch_impus, 3, fetch_impus_fixup, 0, REQUEST_ROUTE | ONREPLY_ROUTE | FAILURE_ROUTE},
     //{"bind_registrar", (cmd_function) bind_registrar, 0, 0, 0, 0},  TODO put this back in !
     {0, 0, 0, 0, 0, 0}
 };
@@ -533,6 +536,16 @@ static int w_assign_server_unreg(struct sip_msg* _m, char* _route, char* _d, cha
 
 }
 
+static int w_scscf_fetch_impus(struct sip_msg* _m, char* _d, char* _uri, str* _dest)
+{
+    str uri = {0};
+
+    if(_uri==NULL || (fixup_get_svalue(_m, (gparam_p)_uri, &uri)!=0 || uri.len<=0)) {
+		LM_ERR("invalid uri parameter\n");
+		return -1;
+	}
+	return scscf_fetch_impus(_m, (udomain_t*)_d, &uri, _dest);
+}
 /*! \brief
  * Wrapper to lookup(location)
  */
@@ -596,7 +609,20 @@ static int assign_save_fixup3_async(void** param, int param_no) {
 
     return 0;
 }
-
+/*! \brief
+ *  * Convert char* parameter to udomain_t* pointer
+ *   * Convert char* parameter to str* pointer
+ *    */
+static int fetch_impus_fixup(void** param, int param_no) {
+	if (param_no == 1) {
+		return domain_fixup(param, 1);
+	} else if (param_no == 2) {
+		return fixup_spve_null(param, 1);
+	} else if (param_no == 3) {
+		return fixup_str_null(param, 1);
+	}
+	return 0;
+}
 /*! \brief
  * Convert char* parameter to udomain_t* pointer
  * Convert char* parameter to pv_elem_t* pointer

@@ -271,3 +271,78 @@ int term_impu_registered(struct sip_msg* _m, char* _t, char* _s)
 	LM_DBG("'%.*s' not found in usrloc\n", uri.len, ZSW(uri.s));
 	return -1;
 }
+
+int scscf_fetch_impus(struct sip_msg* _m, udomain_t* _d, str* _i, str* dest) {
+    int i, j, res;
+    str aor;
+    impurecord_t* impu_rec;
+    ims_public_identity* impi;
+
+    pv_spec_t avp_spec;
+    int_str avp_val;
+    int_str avp_name;
+    unsigned short avp_type;
+
+	LM_DBG("Fetching IMPUs for '%.*s'\n", _i->len, _i->s);
+
+    if (dest->s && dest->len > 0) {
+        if (pv_parse_spec(dest, &avp_spec)==0 || avp_spec.type!=PVT_AVP) {
+            LM_ERR("malformed or non AVP %.*s AVP definition\n", dest->len, dest->s);
+            return -1;
+        }
+
+        if(pv_get_avp_name(0, &(avp_spec.pvp), &avp_name, &avp_type)!=0) {
+            LM_ERR("[%.*s]- invalid AVP definition\n", dest->len, dest->s);
+            return -1;
+        }
+    } else {
+	    LM_ERR("no AVP provided\n");
+	    return -1;
+    }
+    if (extract_aor(_i, &aor) < 0) {
+	    LM_ERR("failed to extract address of record\n");
+	    return -1;
+    }
+
+    ul.lock_udomain(_d, &aor);
+
+    res = ul.get_impurecord(_d, &aor, &impu_rec);
+    if (res > 0) {
+	    LM_DBG("'%.*s' Not found in usrloc\n", aor.len, ZSW(aor.s));
+	    ul.unlock_udomain(_d, &aor);
+	    return -1;
+    }
+
+    if (!impu_rec->s) {
+        LM_DBG("no subscription associated with impu\n");
+	    ul.unlock_udomain(_d, &aor);
+        return -1;
+    }
+    //get IMPU set from the presentity's subscription
+    lock_get(impu_rec->s->lock);
+    for (i = 0; i < impu_rec->s->service_profiles_cnt; i++) {
+	    for (j = 0; j < impu_rec->s->service_profiles[i].public_identities_cnt; j++) {
+	        impi = &(impu_rec->s->service_profiles[i].public_identities[j]);
+	        if (impi->barring != 0) {
+                continue;
+            }
+            if (impi->public_identity.s && impi->public_identity.len > 0) {
+                avp_val.s = impi->public_identity;
+                if(add_avp(AVP_VAL_STR|avp_type, avp_name, avp_val)!=0) {
+	                LM_ERR("failed to add %.*s\n to IMPUs AVP\n",
+                            impi->public_identity.len, impi->public_identity.s);
+                    lock_release(impu_rec->s->lock);
+	                ul.unlock_udomain(_d, &aor);
+                    return -1;
+                }
+				LM_DBG("added %.*s\n to IMPUs AVP\n",
+						impi->public_identity.len, impi->public_identity.s);
+            }
+        }
+    }
+
+    lock_release(impu_rec->s->lock);
+    ul.unlock_udomain(_d, &aor);
+
+    return 1;
+}

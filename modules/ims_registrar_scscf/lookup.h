@@ -49,6 +49,7 @@ int lookup(struct sip_msg* _m, udomain_t* _d);
  */
 int impu_registered(struct sip_msg* _m, char* _t, char* _s);
 int term_impu_registered(struct sip_msg* _m, char* _t, char* _s);
+int scscf_fetch_impus(struct sip_msg* _m, udomain_t* _d, str* _i, str* dest);
 
 
 #endif /* LOOKUP_H */
