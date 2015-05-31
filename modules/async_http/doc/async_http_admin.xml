@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding='ISO-8859-1'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+
+<!-- Include general documentation entities -->
+<!ENTITY % docentities SYSTEM "../../../docbook/entities.xml">
+%docentities;
+
+]>
+<!-- Module User's Guide -->
+
+<chapter>
+	
+	<title>&adminguide;</title>
+	
+	<section>
+	<title>Overview</title>
+	<para>
+		This module performs asynchronous HTTP queries.
+	</para>
+	</section>
+
+	<section>
+	<title>Dependencies</title>
+	<section>
+		<title>&kamailio; Modules</title>
+		<para>
+		The following modules must be loaded before this module:
+			<itemizedlist>
+			<listitem>
+			<para>
+				<emphasis>tm</emphasis> - Transcation module
+			</para>
+			</listitem>
+			</itemizedlist>
+		</para>
+	</section>
+	<section>
+		<title>External Libraries or Applications</title>
+		<para>
+		The following libraries or applications must be installed before running
+		&kamailio; with this module loaded:
+			<itemizedlist>
+			<listitem>
+            <para>
+				<emphasis>libcurl</emphasis>
+				<emphasis>libev</emphasis>
+			</para>
+			</listitem>
+			</itemizedlist>
+		</para>
+	</section>
+	</section>
+	<section>
+	<title>Parameters</title>
+	<section>
+		<title><varname>workers</varname> (int)</title>
+		<para>
+            Number of worker processes to be started to send HTTP requests
+            and asynchronously handle responses.
+		</para>
+		<para>
+		<emphasis>
+			Default value is 1.
+		</emphasis>
+		</para>
+		<example>
+		<title>Set <varname>workers</varname> parameter</title>
+		<programlisting format="linespecific">
+...
+modparam("async_http", "workers", 2)
+...
+</programlisting>
+		</example>
+	</section>
+	<section>
+		<title><varname>http_timeout</varname> (str)</title>
+        <para>
+            Defines in milliseconds how long &kamailio; waits for response
+            from HTTP server.
+		</para>
+		<para>
+		<emphasis>
+			Default value is 500ms.
+		</emphasis>
+		</para>
+		<example>
+		<title>Set <varname>http_timeout</varname> parameter</title>
+		<programlisting format="linespecific">
+...
+modparam("async_http", "http_timeout", 1000)
+...
+</programlisting>
+		</example>
+	</section>
+	<section>
+		<title><varname>hash_size</varname> (str)</title>
+        <para>
+		    The size of the hash table internally used to keep the requests. A
+		    larger table is much faster but consumes more memory. The hash size
+		    must be a power of two, otherwise it will be rounded down to the nearest
+		    power of two.
+		</para>
+		<para>
+		<emphasis>
+			Default value is 2048.
+		</emphasis>
+		</para>
+		<example>
+		<title>Set <varname>hash_size</varname> parameter</title>
+		<programlisting format="linespecific">
+...
+modparam("async_http", "hash_size", 1024)
+...
+</programlisting>
+		</example>
+	</section>
+	</section>
+
+	<section>
+	<title>Functions</title>
+	<section id="async_http.f.http_async_get">
+	    <title>
+		<function moreinfo="none">http_async_get(url, route_name)</function>
+	    </title>
+        <para>
+            Sends HTTP GET request to URL given in <quote>url</quote> parameter, which is a string that may contain pseudo variables.
+        </para>
+            Parameter <quote>route_name</quote> defines the route to be executed upon reception of HTTP reply, on error or on timeout.
+        <para>
+        </para>
+		<para>
+		    This function can be used from ANY_ROUTE.
+        </para>
+        <para>
+            This method is executed asynchronously. The HTTP return code, body and error are returned in three avp.
+            See example on how to retrieve return values.
+        </para>
+		<example>
+		<title><function>http_async_get()</function> usage</title>
+		<programlisting format="linespecific">
+...
+http_async_get("http://example.com/test.php?r_uri=$rU&amp;f_uri=$fU","HTTP_REPLY");
+...
+route[HTTP_REPLY] {
+    xlog("L_INFO", "route[HTTP_REPLY]: http_rc $avp(http_rc)\n");
+    xlog("L_INFO", "route[HTTP_REPLY]: http_rb $avp(http_rb)\n");
+    xlog("L_INFO", "route[HTTP_REPLY]: http_error $avp(http_error)\n");
+}
+...
+        </programlisting>
+	    </example>
+	</section>
+	<section id="async_http.f.http_async_post">
+	    <title>
+		<function moreinfo="none">http_async_post(url, post_data, route_name)</function>
+	    </title>
+        <para>
+            Sends HTTP POST request to URL given in <quote>url</quote> parameter, which is a string that may contain pseudo variables.
+        <para>
+        </para>
+            Parameter <quote>post_data</quote>, which is sent as the body of the request, may also contain pseudo variables.
+        </para>
+            Parameter <quote>route_name</quote> defines the route to be executed upon reception of HTTP reply, on error or on timeout.
+        <para>
+        </para>
+		<para>
+		    This function can be used from ANY_ROUTE.
+        </para>
+        <para>
+            This method is executed asynchronously. The HTTP return code, body and error are returned in three avp.
+            See example on how to retrieve return values.
+        </para>
+		<example>
+		<title><function>http_async_post()</function> usage</title>
+		<programlisting format="linespecific">
+...
+http_async_post("http://example.com/test.php", "{'r_uri':'$rU', 'f_uri':'$fU'}","HTTP_REPLY");
+...
+route[HTTP_REPLY] {
+    xlog("L_INFO", "route[HTTP_REPLY]: http_rc $avp(http_rc)\n");
+    xlog("L_INFO", "route[HTTP_REPLY]: http_rb $avp(http_rb)\n");
+    xlog("L_INFO", "route[HTTP_REPLY]: http_error $avp(http_error)\n");
+}
+...
+        </programlisting>
+	    </example>
+	</section>
+</section>
+    
+<section>
+	<title>Statistics</title>
+	<section>
+		<title><varname>requests</varname></title>
+		<para>
+		The number of http requests sent.
+		</para>
+	</section>
+	<section>
+		<title><varname>replies</varname></title>
+		<para>
+		The number of received http replies.
+		</para>
+	</section>
+	<section>
+		<title><varname>errors</varname></title>
+		<para>
+		The number of errors.
+		</para>
+	</section>
+	<section>
+		<title><varname>timeouts</varname></title>
+		<para>
+		The number of timed out requests.
+		</para>
+	</section>
+
+</section>
+</chapter>
+
