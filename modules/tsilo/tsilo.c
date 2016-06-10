@@ -33,6 +33,7 @@
 #include "../../dset.h"
 #include "../../rpc_lookup.h"
 #include "../../lib/kcore/statistics.h"
+#include "../../kemi.h"
 
 #include "ts_hash.h"
 #include "ts_handlers.h"
@@ -122,7 +123,6 @@ struct module_exports exports = {
 	destroy, 	/* destroy function */
 	0,  		/* Per-child init function */
 };
-
 /**
  * init module function
  */
@@ -333,3 +333,42 @@ static int w_ts_store1(struct sip_msg* msg, char *_ruri, char *p2)
 	}
 	return ts_store(msg, &suri);
 }
+
+static sr_kemi_t tsilo_kemi_exports[] = {
+	{ str_init("tsilo"), str_init("ts_store"), 
+		SR_KEMIP_INT, w_ts_store,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("tsilo"), str_init("ts_store_uri"), 
+		SR_KEMIP_INT, w_ts_store1,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("tsilo"), str_init("ts_append_to"), 
+		SR_KEMIP_INT, w_ts_append_to,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("tsilo"), str_init("ts_append_to_uri"), 
+		SR_KEMIP_INT, w_ts_append_to2,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("tsilo"), str_init("ts_append"), 
+		SR_KEMIP_INT, w_ts_append,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ {0, 0}, {0, 0}, 0, NULL, { 0, 0, 0, 0, 0, 0  }  }
+};
+
+/**
+ *  *
+ *   */
+int mod_register(char *path, int *dlflags, void *p1, void *p2)
+{
+	     sr_kemi_modules_add(tsilo_kemi_exports);
+		     return 0;
+
+} 
