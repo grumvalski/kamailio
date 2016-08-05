@@ -39,7 +39,7 @@
 #else
 /* TODO: logging for SER */
 
-#include "dprint.h"
+#include "../../dprint.h"
 
 #define ERROR_LOG(a,args...)		ERR(a,##args)
 #define DEBUG_LOG(a,args...)		DBG(a,##args)
