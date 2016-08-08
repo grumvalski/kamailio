@@ -1751,3 +1751,262 @@ str cscf_get_public_identity_from_called_party_id(struct sip_msg *msg,struct hdr
 	return id;
 }
 
+/**
+ * Looks for the First Route header
+ * @param msg - the sip message
+ * @param hr - param to return the ptr to the found header
+ * @is_shm - msg from from shared memory 
+ * @returns the first route string
+ */
+str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm)
+{
+	struct hdr_field *h;
+	rr_t *r;
+	str route={0,0};
+	if (hr) *hr = 0;	
+	if (!msg) return route;
+	if (parse_headers(msg, HDR_ROUTE_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: error parsing headers\n");
+		return route;
+	}
+	h = msg->route;
+	if (!h){
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_first_route: Header Route not found\n");
+		return route;
+	}
+	if (hr) *hr = h;
+
+	if(is_shm){
+		h->parsed = 0;	
+	}
+
+	if (parse_rr(h)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: Error parsing as Route header\n");
+		return route;
+	}
+	r = (rr_t*)h->parsed;
+	route = r->nameaddr.uri;
+
+	if(is_shm){
+		free_rr(&r);
+		h->parsed = 0;	
+	}
+	
+	return route;
+}
+
+/**
+ * Looks for the Session-Expires header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-expire body
+ */
+str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h)
+{
+	str ses_expr={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_session_expires_body: Error parsing until header Session-Expires: \n");
+		return ses_expr;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len ==15  &&
+			strncasecmp(hdr->name.s,"Session-Expires",15)==0)
+		{
+			*h = hdr;
+			ses_expr = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+	if (!hdr){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_session_expires_body: Message does not contain Session-Expires header.\n");
+		return ses_expr;
+	}
+
+	return ses_expr;	
+}
+
+static str s_refresher = {"refresher=", 10};
+/**
+ * get Session Expires Value .
+ * @param expHdr - parsed Session-Expires Header
+ * @param refresher - param for returning session refresher
+ * @returns Session-Expires value on success or 0
+ */
+time_t cscf_get_session_expires(str expHdr, str *refresher)
+{
+	int i;
+	time_t exptime;
+	int afterExp = 0;
+	str exp;
+	exp.len = 0;
+	exp.s = expHdr.s;
+	for (i=0; i < expHdr.len; i++){
+		if (expHdr.s[i] != ' ' && expHdr.s[i] != '\t'){
+			if (expHdr.s[i] == ';')
+				break;
+			afterExp = 1;
+			exp.len++;
+		}
+		else {
+			if (!afterExp)
+				exp.s++;
+		}
+	}
+	if (exp.len == 0)	
+		return 0;
+
+	strtotime(exp, exptime);
+	get_param(expHdr, s_refresher, *refresher);
+	return exptime;
+}
+
+/**
+ * Looks for the Min-SE header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the min-se body
+ */
+str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
+{
+	str min_se={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_min_se: Error parsing until header Min-SE: \n");
+		return min_se;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len ==6  &&
+			strncasecmp(hdr->name.s,"Min-SE",6)==0)
+		{
+			*h = hdr;
+			min_se = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+	if (!hdr){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_min_se: Message does not contain Min-Se header.\n");
+		return min_se;
+	}
+
+	return min_se;	
+}
+
+/**
+ * Deletes the given header.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
+ */
+int cscf_del_header(struct sip_msg *msg,struct hdr_field *h)
+{
+	if (!h||!h->name.s){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_del_header: no header specified.\n");
+		return 1;
+	}
+
+	if (!del_lump(msg,h->name.s-msg->buf,h->len,0)){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_del_header: Error adding del lump\n");
+		return 0;		
+	}		
+	return 1;	
+}
+
+/**
+ * Deletes all the headers of a given type.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
+ */
+int cscf_del_all_headers(struct sip_msg *msg,int hdr_type)
+{
+	struct hdr_field *h;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_del_all_headers: Error parsing until last header\n");
+		return 0;
+	}	
+	for(h = msg->headers;h;h=h->next)
+		if (h->type == hdr_type)
+			if (!cscf_del_header(msg,h)) return 0;
+			
+	return 1;	
+}
+
+/**
+ * Looks for the Subscription-State header and extracts its content
+ * @param msg - the sip message
+ * @returns expiration if active, -1 if not found, -2 if terminated
+ */
+int cscf_get_subscription_state(struct sip_msg *msg)
+{
+	struct hdr_field *h;
+	int expires = 0,i;
+	str state;
+	
+	if (!msg) return -1;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_subscription_state: Error parsing headers until Contact.\n");
+		return -1;
+	}
+
+	h = msg->headers;
+	while(h){
+		if (h->name.len == s_subscription_state.len  &&
+			strncasecmp(h->name.s,s_subscription_state.s,s_subscription_state.len)==0){
+			state = h->body;
+			while(state.len && (state.s[0]==' ' || state.s[0]=='\t')){
+				state.s = state.s+1;
+				state.len --;
+			}
+			while(state.len && (state.s[state.len-1]==' ' || state.s[state.len-1]=='\t' || state.s[state.len-1]=='>')){
+				state.len--;
+			}				
+			
+			if (state.len>=s_terminated.len && strncasecmp(state.s,s_terminated.s,s_terminated.len)==0)
+				return 0;
+			else if ((state.len>=s_active.len && strncasecmp(state.s,s_active.s,s_active.len)==0) || 
+				(state.len>=s_pending.len &&  strncasecmp(state.s,s_pending.s,s_pending.len)==0)){
+				i=0;
+				while(i<state.len-s_expires.len && strncasecmp(state.s+i,s_expires.s,s_expires.len)!=0)
+					i++;
+				if (i<state.len-s_expires.len){
+					i+=s_expires.len;
+					while(i<state.len && state.s[i]>='0' && state.s[i]<='9'){
+						expires = expires * 10 + state.s[i]-'0';
+						i++;
+					}			
+					return expires;			
+				}
+				else return -1;/* expires not present, but active */
+			}else 
+				return -1;/* unrecognizable state */
+		}
+		h = h->next;
+	}		
+	LOG(L_ERR,"ERR:"M_NAME":cscf_get_subscription_state: Subscription-state header not found.\n");
+	return -1;
+}
+
+/** 
+ * Returns the corresponding request for a reply, using tm transactions.
+ * @param reply - the reply to find request for
+ * @returns the transactional request
+ */
+struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
+{
+	struct cell *t;
+	t = tmb.t_gett();
+	if (!t || t==(void*) -1){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_request_from_reply: Reply without transaction\n");
+		return 0;
+	}
+	if (t) return t->uas.request;
+	else return 0;
+}
+

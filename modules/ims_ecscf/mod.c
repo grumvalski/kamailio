@@ -71,14 +71,9 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../../modules/tm/tm_load.h"
-
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/dialog/dlg_mod.h"
-	#include "../lib/lost/client.h"
-#else
-	#include "../../modules/dialog/dlg_mod.h"
-	#include "../../lib/lost/client.h"
-#endif
+#include "../../modules/ims_dialog/dlg_load.h"
+#include "../../modules/ims_dialog/dlg_hash.h"
+#include "../../lib/lost/client.h"
 
 #include "dlg_state.h"
 #include "lrf.h"
@@ -106,6 +101,7 @@ int use_default_psap = 1;				/* policy to enable/disable using a default PSAP */
 char * default_psap_uri = "sip:default_psap@open-ims.test";	/* the URI for the default PSAP */
 str default_psap_uri_str = {0,0};
 enum user_id_type user_id = SIP_URI_ID;
+struct dlg_binds dlgb;
 
 str ecscf_name_str;					/**< SIP URI of the node>*/
 str ecscf_record_route_mo;					/**< Record-route for originating case 				*/
@@ -130,8 +126,8 @@ int E_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
  */
 static cmd_export_t ecscf_cmds[]={
 	{"E_is_in_dialog",				E_is_in_dialog, 			1, 0, REQUEST_ROUTE},
-	{"E_is_anonymous_user",				E_is_anonymous_user, 			0, 0, REQUEST_ROUTE},
-	{"E_trans_in_processing",			E_trans_in_processing, 			0, 0, REQUEST_ROUTE},
+	{"E_is_anonymous_user",			E_is_anonymous_user, 			0, 0, REQUEST_ROUTE},
+	{"E_trans_in_processing",		E_trans_in_processing, 			0, 0, REQUEST_ROUTE},
 	{"E_save_dialog",				E_save_dialog,				2, 0, REQUEST_ROUTE},
 	{"E_update_dialog",				E_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"E_drop_dialog",				E_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
@@ -294,15 +290,10 @@ static int mod_init(void)
 		goto error;
 
 	/* bind to the dialog module */
-	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
-	if (!load_dlg) {
-		LOG(L_ERR, "ERR:"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
-		return -1;
-	}
-	if (load_dlg(&dialogb) != 0) {
-		return -1;
-	}
-
+	if (load_dlg_api(&dlgb) != 0) { /* load the dialog API */                                                                                                                                                                                                                  
+        LM_ERR("can't load Dialog API\n");
+        goto error;
+    }
 	/* init the dialog storage */
 	if (!e_dialogs_init(ecscf_dialogs_hash_size)){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");

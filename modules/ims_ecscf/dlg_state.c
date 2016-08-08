@@ -292,7 +292,7 @@ e_dialog* new_e_dialog(str call_id,str aor, enum e_dialog_direction dir)
 	d = shm_malloc(sizeof(e_dialog));
 	if (!d) {
 		LOG(L_ERR,"ERR:"M_NAME":new_e_dialog(): Unable to alloc %d bytes\n",
-			sizeof(e_dialog));
+			(int)sizeof(e_dialog));
 		goto error;
 	}
 	memset(d,0,sizeof(e_dialog));

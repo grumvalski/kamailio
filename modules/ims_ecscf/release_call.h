@@ -52,14 +52,8 @@
 #define RELEASE_CALL_H_
 #include "../../modules/tm/tm_load.h"
 #include "dlg_state.h"
-#include "sip.h"
-
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/dialog/dlg_mod.h"
-#else
-	#include "../../modules/dialog/dlg_mod.h"
-#endif
-
+#include "mod.h"
+#include "../../lib/ims/ims_getters.h"
 
 enum release_call_situation{
 	RELEASE_CALL_EARLY=0,

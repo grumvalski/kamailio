@@ -54,7 +54,7 @@ struct dlg_binds {
 	get_dlg_variable_f 		get_dlg_var;
 	get_dlg_expires_f 		get_dlg_expires;
 	get_dlg_f			get_dlg;
-        release_dlg_f                   release_dlg;
+    release_dlg_f                   release_dlg;
 };
 
 

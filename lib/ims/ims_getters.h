@@ -452,5 +452,67 @@ int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr);
  */
 str cscf_get_public_identity_from_called_party_id(struct sip_msg *msg,struct hdr_field **hr);
 
+/**
+ * Looks for the First Route header
+ * @param msg - the sip message
+ * @param hr - param to return the ptr to the found header
+ * @is_shm - msg from from shared memory 
+ * @returns the first route string
+ */
+str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm);
+
+/**
+ * Looks for the Session-Expires header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-expire body
+ */
+str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h);
+
+/**
+ * get Session Expires Value .
+ * @param expHdr - parsed Session-Expires Header
+ * @param refresher - param for returning session refresher
+ * @returns Session-Expires value on success or 0
+ */
+time_t cscf_get_session_expires(str expHdr, str *refresher);
+
+/**
+ * Looks for the Min-SE header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the min-se body
+ */
+str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h);
+
+/**
+ * Deletes the given header.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
+ */
+int cscf_del_header(struct sip_msg *msg,struct hdr_field *h);
+
+/**
+ * Deletes all the headers of a given type.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
+ */
+int cscf_del_all_headers(struct sip_msg *msg,int hdr_type);
+
+/**
+ * Looks for the Subscription-State header and extracts its content
+ * @param msg - the sip message
+ * @returns expiration if active, -1 if not found, -2 if terminated
+ */
+int cscf_get_subscription_state(struct sip_msg *msg);
+
+/** 
+ * Returns the corresponding request for a reply, using tm transactions.
+ * @param reply - the reply to find request for
+ * @returns the transactional request
+ */
+struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
 #endif
 

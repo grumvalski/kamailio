@@ -51,7 +51,7 @@
 #include "release_call.h"
 
 extern struct tm_binds tmb; 
-extern dlg_func_t dialogb;	
+extern struct dlg_binds dlgb;
 
 
 extern str ecscf_record_route_mo_uri;
@@ -311,11 +311,7 @@ int release_call_previous(e_dialog *d,enum release_call_situation situation,int 
 	
 	if (t && t!=(void*) -1  && t->uas.request) {
 		/*first trick: i really want to get this reply sent even though we are onreply*/
-		#ifdef SER_MOD_INTERFACE
-        		route_type = FAILURE_ROUTE;
-		#else
-		        *tmb.route_mode=MODE_ONFAILURE;
-		#endif
+		set_route_type(FAILURE_ROUTE);
 		
 		/*second trick .. i haven't recieve any response from the uac
 		 * if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
@@ -327,11 +323,7 @@ int release_call_previous(e_dialog *d,enum release_call_situation situation,int 
 		/*now its safe to do this*/
 		
 		tmb.t_reply(t->uas.request,reason_code,reason_text.s);
-		#ifdef SER_MOD_INTERFACE
-      			route_type = ONREPLY_ROUTE;
-		#else
-			*tmb.route_mode=MODE_ONREPLY;
-		#endif
+      	set_route_type(ONREPLY_ROUTE);
 		tmb.t_release(t->uas.request);
 
 		/*needed because if not i get last message retransmited... 
@@ -493,7 +485,7 @@ int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum e_dialog
 			 * and the ACK is never replied it would be a bug if i did*/
 			cbp = shm_malloc(sizeof(enum e_dialog_direction));
 			if (!cbp){
-				LOG(L_ERR,"ERR:"M_NAME":send_request(): error allocating %d bytes\n",sizeof(enum e_dialog_direction));
+				LOG(L_ERR,"ERR:"M_NAME":send_request(): error allocating %d bytes\n",(int)sizeof(enum e_dialog_direction));
 				return 0;
 			}
 			*cbp=dir;
