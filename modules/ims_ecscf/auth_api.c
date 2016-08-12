@@ -155,7 +155,7 @@ static str realm_par={"realm=\"",7};
  * @returns 0 on success, 1 if not found
  * \note This function is taken from the auth module
  */
-inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
+static inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
 									hdr_types_t _hftype, struct hdr_field** _h)
 {
 	struct hdr_field** hook, *ptr, *prev;

@@ -40,9 +40,10 @@
 #include "../../dprint.h"
 #include "../../str.h"
 #include "../../ut.h"
+#include "../../lib/ims/ims_getters.h"
 #include "parse_content.h"
 #include "mod.h"
-#include "sip.h"
+
 
 
 #define is_mime_char(_c_) \

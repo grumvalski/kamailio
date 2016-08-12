@@ -43,9 +43,11 @@
  * 
  */
 
+#include "../../trim.h"
 #include "../../parser/msg_parser.h"
 #include "../../parser/digest/digest.h"
 #include "../../parser/parse_to.h"
+#include "../../parser/parser_f.h"
 #include "../../parser/parse_expires.h"
 #include "../../parser/contact/parse_contact.h"
 #include "../../parser/parse_uri.h"
@@ -58,6 +60,47 @@
 #include "ims_getters.h"
 #include "../../parser/parse_ppi_pai.h"
 
+#define strtotime(src,dest) \
+{\
+    int i;\
+    (dest)=0;\
+    for(i=0;i<(src).len;i++)\
+        if ((src).s[i]>='0' && (src).s[i]<='9')\
+            (dest) = (dest)*10 + (src).s[i] -'0';\
+}
+
+#define get_param(src,name,dst) \
+{\
+    int i,j;\
+    (dst).s=0;(dst).len=0;\
+    for(i=0;i<(src).len-(name).len;i++)\
+        if (strncasecmp((src).s+i,(name).s,(name).len)==0 &&\
+            ((src).s[i-1]==' ' ||(src).s[i-1]==';'||(src).s[i-1]=='\t')){\
+            j=i+(name).len;\
+            (dst).s = (src).s+j;\
+            (dst).len = 0;\
+            while(j<(src).len && (src).s[j]!=','&& (src).s[j]!=' '&& (src).s[j]!='\t'&& (src).s[j]!=';') \
+                j++;            \
+            (dst).len = j-i-(name).len;\
+            break;\
+        }       \
+}
+
+int str_case_equals(const str *a, const str *b)                                                                                                                                                                                                                            
+{
+    int i;
+    
+    if (!a) {
+        if (!b) return 0;
+        else return (b->len == 0) ? 0 : 1;
+    }
+    if (!b) return (a->len == 0) ? 0 : 1;
+    if (a->len != b->len) return 1;
+    
+    for (i = 0; i < a->len; i++)
+        if (a->s[i] != b->s[i]) return 1;
+    return 0;
+}
 
 /**
  *	Delete parameters and stuff from uri.
@@ -1766,12 +1809,12 @@ str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm)
 	if (hr) *hr = 0;	
 	if (!msg) return route;
 	if (parse_headers(msg, HDR_ROUTE_F, 0)<0){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: error parsing headers\n");
+		LM_ERR("error parsing headers\n");
 		return route;
 	}
 	h = msg->route;
 	if (!h){
-		LOG(L_DBG,"DBG:"M_NAME":cscf_get_first_route: Header Route not found\n");
+		LM_DBG("Header Route not found\n");
 		return route;
 	}
 	if (hr) *hr = h;
@@ -1781,7 +1824,7 @@ str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm)
 	}
 
 	if (parse_rr(h)<0){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: Error parsing as Route header\n");
+		LM_ERR("Error parsing as Route header\n");
 		return route;
 	}
 	r = (rr_t*)h->parsed;
@@ -1807,7 +1850,7 @@ str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h)
 	struct hdr_field *hdr;
 	*h = 0;
 	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_session_expires_body: Error parsing until header Session-Expires: \n");
+		LM_ERR("Error parsing until header Session-Expires: \n");
 		return ses_expr;
 	}
 	hdr = msg->headers;
@@ -1822,7 +1865,7 @@ str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h)
 		hdr = hdr->next;
 	}
 	if (!hdr){
-		LOG(L_DBG, "DBG:"M_NAME":cscf_get_session_expires_body: Message does not contain Session-Expires header.\n");
+		LM_DBG("message does not contain Session-Expires header.\n");
 		return ses_expr;
 	}
 
@@ -1876,7 +1919,7 @@ str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
 	struct hdr_field *hdr;
 	*h = 0;
 	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_min_se: Error parsing until header Min-SE: \n");
+		LM_ERR("Error parsing until header Min-SE: \n");
 		return min_se;
 	}
 	hdr = msg->headers;
@@ -1891,7 +1934,7 @@ str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
 		hdr = hdr->next;
 	}
 	if (!hdr){
-		LOG(L_DBG, "DBG:"M_NAME":cscf_get_min_se: Message does not contain Min-Se header.\n");
+		LM_DBG("Message does not contain Min-Se header.\n");
 		return min_se;
 	}
 
@@ -1907,12 +1950,12 @@ str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
 int cscf_del_header(struct sip_msg *msg,struct hdr_field *h)
 {
 	if (!h||!h->name.s){
-		LOG(L_DBG, "DBG:"M_NAME":cscf_del_header: no header specified.\n");
+		LM_DBG("no header specified.\n");
 		return 1;
 	}
 
 	if (!del_lump(msg,h->name.s-msg->buf,h->len,0)){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_del_header: Error adding del lump\n");
+		LM_ERR("Error adding del lump\n");
 		return 0;		
 	}		
 	return 1;	
@@ -1928,7 +1971,7 @@ int cscf_del_all_headers(struct sip_msg *msg,int hdr_type)
 {
 	struct hdr_field *h;
 	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_del_all_headers: Error parsing until last header\n");
+		LM_ERR("Error parsing until last header\n");
 		return 0;
 	}	
 	for(h = msg->headers;h;h=h->next)
@@ -1938,6 +1981,11 @@ int cscf_del_all_headers(struct sip_msg *msg,int hdr_type)
 	return 1;	
 }
 
+static str s_subscription_state={"Subscription-State",18};                                                                                                                                                                                                                     
+static str s_active={"active",6};
+static str s_pending={"pending",7};
+static str s_terminated={"terminated",10};
+static str s_expires={"expires=",8};
 /**
  * Looks for the Subscription-State header and extracts its content
  * @param msg - the sip message
@@ -1951,7 +1999,7 @@ int cscf_get_subscription_state(struct sip_msg *msg)
 	
 	if (!msg) return -1;
 	if (parse_headers(msg, HDR_EOH_F, 0)<0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_subscription_state: Error parsing headers until Contact.\n");
+		LM_ERR("Error parsing headers until Contact.\n");
 		return -1;
 	}
 
@@ -1989,24 +2037,182 @@ int cscf_get_subscription_state(struct sip_msg *msg)
 		}
 		h = h->next;
 	}		
-	LOG(L_ERR,"ERR:"M_NAME":cscf_get_subscription_state: Subscription-state header not found.\n");
+	LM_ERR("Subscription-state header not found.\n");
 	return -1;
 }
-
-/** 
- * Returns the corresponding request for a reply, using tm transactions.
- * @param reply - the reply to find request for
- * @returns the transactional request
+/**
+ * Looks for the Content-Type header and extracts its content.
+ * @param msg - the sip message
+ * @returns the content-type string, or an empty string if not found
  */
-struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
+str cscf_get_content_type(struct sip_msg *msg)
 {
-	struct cell *t;
-	t = tmb.t_gett();
-	if (!t || t==(void*) -1){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_request_from_reply: Reply without transaction\n");
-		return 0;
+    str ct={0,0};
+    if (!msg) return ct;
+    if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type){
+        ct = msg->content_type->body;
+        while(ct.s[0]==' '||ct.s[0]=='\t'){
+            ct.s++;
+            ct.len--;
+        }
+        while(ct.s[ct.len-1]==' '||ct.s[ct.len-1]=='\t')
+            ct.len--;
+    }
+    return ct;
+}
+
+/**
+ * Looks for the Content-length header and extracts its content
+ * @param msg - the sip message
+ * @returns the content length or 0 if not found
+ */
+int cscf_get_content_len(struct sip_msg *msg)
+{
+    int cl=0;
+    if (!msg) return 0;
+    if (parse_headers(msg, HDR_CONTENTLENGTH_F, 0) != -1 && msg->content_length &&
+            msg->content_length->parsed)
+        cl = get_content_length(msg);       
+    return cl;
+}
+
+/**
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
+ */
+struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name)
+{       
+    struct hdr_field *h;
+    if (parse_headers(msg, HDR_EOH_F, 0)<0){
+        LM_ERR("cscf_get_path: error parsing headers\n");
+        return NULL;
+    }
+    h = msg->headers;
+    while(h){
+        if (h->name.len==header_name.len &&
+            strncasecmp(h->name.s,header_name.s,header_name.len)==0)
+                break;
+        h = h->next;
+    }
+    return h;
+}
+
+/**
+ * Replace a string in a message with another one.
+ * \note the orig string MUST be allocated in the limits of msg->buf.
+ * @param msg - the SIP message to modify 
+ * @param orig - the string to be replaced
+ * @param repl - string to replace with
+ * @returns 1 on success 0 on fail (the original string was not in the original SIP message)
+ */
+int cscf_replace_string(struct sip_msg *msg, str orig,str repl)
+{
+    struct lump* anchor;
+    if (orig.s<msg->buf || orig.s > msg->buf + msg->len){
+        LM_ERR("original string not inside msg buffer\n");
+        return 0;
+    }
+    anchor = anchor_lump(msg, orig.s - msg->buf, 0 , 0);
+    if (anchor == NULL) {
+        LM_ERR("anchor_lump failed\n");
+        return 0;
+    }
+
+    if (!insert_new_lump_after(anchor, repl.s,repl.len,HDR_OTHER_T)){
+        LM_ERR("error creating lump for string\n" );
+        return 0;
+    }
+    if (!del_lump(msg, orig.s - msg->buf, orig.len, 0)) {
+        LM_ERR("Can't remove string <%.*s>\n",
+            orig.len,orig.s);
+        return 0;
+    }
+    return 1;
+}
+
+/* Cleans non SHM lumps that were added to the message in order to forward it, for example                                                                                                                                                                                     
+ * otherwise, if it is a request and an error response is received, run_failure_handlers from the TM will probably crash
+ */
+void cscf_del_nonshm_lumps(struct sip_msg *msg){
+    del_nonshm_lump(&msg->add_rm);
+    del_nonshm_lump(&msg->body_lumps);
+    del_nonshm_lump_rpl(&msg->reply_lump);
+}
+
+static inline int contains_extension_support(struct hdr_field *h, 
+		str *extension)
+{
+	/* "parses" Supported header and looks for extension */
+	str s, val;
+	char *c;
+	
+	if (!h) return 0;
+
+	s = h->body;
+	while (s.len > 0) {
+		c = find_not_quoted(&s, ',');
+		if (c) {
+			val.s = s.s;
+			val.len = c - val.s;
+			trim(&val);
+			if (str_case_equals(&val, extension) == 0) return 1;
+			s.len = s.len - (c - s.s) - 1;
+			s.s = c + 1;
+		}
+		else {
+			trim(&s);
+			if (str_case_equals(&s, extension) == 0) return 1;
+			break;
+		}
 	}
-	if (t) return t->uas.request;
-	else return 0;
+	return 0;
+}
+
+int supports_extension(struct sip_msg *m, str *extension)
+{
+	/* walk through all Supported headers */
+	struct hdr_field *h;
+	int res;
+
+	/* we need all Supported headers */
+	res = parse_headers(m, HDR_EOH_F, 0);
+	if (res == -1) {
+		ERR("Error while parsing headers (%d)\n", res);
+		return 0; /* what to return here ? */
+	}
+	
+	h = m->supported;
+	while (h) {
+		if (h->type == HDR_SUPPORTED_T) {
+			if (contains_extension_support(h, extension)) return 1;
+		}
+		h = h->next;
+	}
+	return 0;
+}
+
+int requires_extension(struct sip_msg *m, str *extension)
+{
+	/* walk through all Require headers */
+	struct hdr_field *h;
+	int res;
+
+	/* we need all Require headers */
+	res = parse_headers(m, HDR_EOH_F, 0);
+	if (res == -1) {
+		ERR("Error while parsing headers (%d)\n", res);
+		return 0; /* what to return here ? */
+	}
+	
+	h = m->require;
+	while (h) {
+		if (h->type == HDR_REQUIRE_T) {
+			if (contains_extension_support(h, extension)) return 1;
+		}
+		h = h->next;
+	}
+	return 0;
 }
 

@@ -47,7 +47,7 @@
  *  \author Ancuta Onofrei andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
-
+#include "../../modules/tm/dlg.h"
 #include "release_call.h"
 
 extern struct tm_binds tmb; 
@@ -369,7 +369,7 @@ int release_call_e(e_dialog *d,int reason_code,str reason_text)
 {		
 	if (d->state>=DLG_STATE_CONFIRMED)
 			return(release_call_confirmed(d,reason_code,reason_text));
-	 else  
+	else  
 			return(release_call_early(d,reason_code,reason_text)); 
 }
 
@@ -406,7 +406,7 @@ int release_call(str callid,int reason_code,str reason_text)
 	/*treat it as ORIGINATING or TERMINATING?*/				
 done:		
 	if (d) d_unlock(hash);
-	return 0;	
+	return res;	
 }
 
 
@@ -474,6 +474,8 @@ done:
 */
 int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum e_dialog_direction dir)
 {
+	uac_req_t uac_r;
+
 	if((d!=NULL) && (method.s!=NULL))
 	{
 		enum e_dialog_direction *cbp=NULL;
@@ -489,9 +491,15 @@ int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum e_dialog
 				return 0;
 			}
 			*cbp=dir;
-		}	
-		dialogb.request_inside(&method,&reqbuf,NULL, d,cb,cbp);
-		return 1;
+		}
+		if ((method.len == 3) && (!memcmp("ACK", method.s, 3))) goto send;
+		if ((method.len == 6) && (!memcmp("CANCEL", method.s, 6))) goto send;
+		d->loc_seq.value++; /* Increment CSeq */
+		
+ send:
+		set_uac_req(&uac_r, &method, &reqbuf, NULL, d, TMCB_LOCAL_COMPLETED,
+				            cb, (void*)cbp);
+        return tmb.t_uac(&uac_r);
 	}
 	
 	return 0;

@@ -59,23 +59,16 @@
 #include "../../modules/tm/t_reply.h"
 #include "../../parser/parse_geoloc.h"
 
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/dialog/dlg_mod.h"
-	#include "../lib/lost/client.h"
-	#include "../lib/lost/parsing.h"
-	#include "../lib/lost/pidf_loc.h"
-#else 
-	#include "../../modules/dialog/dlg_mod.h"
-	#include "../../lib/lost/client.h"
-	#include "../../lib/lost/parsing.h"
-	#include "../../lib/lost/pidf_loc.h"
-#endif
+//#include "../../modules/dialog/dlg_mod.h"
+#include "../../lib/lost/client.h"
+#include "../../lib/lost/parsing.h"
+#include "../../lib/lost/pidf_loc.h"
+#include "../../lib/ims/ims_getters.h"
 
 #include "dlg_state.h"
 #include "lrf.h"
 #include "route.h"
 #include "multipart_parse.h"
-#include "sip.h"
 
 extern struct tm_binds tmb;   
 extern str ecscf_name_str;	
@@ -84,21 +77,21 @@ extern int use_default_psap;
 extern str default_psap_uri_str;
 extern enum user_id_type user_id;
 
-static str options_method=    {"OPTIONS",7};
-static str accept_hdr=        {"Accept: application/route+xml\r\n",31};
-static str no_content_len_hdr={"Content-Length: 0\r\n",19};
-static str content_len_hdr_s= {"Content-Length: ",16};
-static str content_len_hdr_e= {"\r\n",2};
-static str max_fwds_hdr=      {"Max-Forwards: 10\r\n",18};
-static str contact_s=         {"Contact: <",10};
-static str contact_e=	      {">\r\n",3};
-static str route_s=	      {"Route: <",8};
-static str route_e=           {">\r\n",3};
-static str service_hdr_s=     {"Service: ", 9};
-static str service_hdr_e=     {"\r\n", 2};
-static str content_type_hdr=  {"Content-Type: application/pidf+xml\r\n",36};
-static str esqk_hdr_name=  {"ESQK",4};
-static str psap_uri_hdr_name=  {"PSAP-URI",8};
+static str options_method     = {"OPTIONS",7};
+static str accept_hdr 		  = {"Accept: application/route+xml\r\n",31};
+static str no_content_len_hdr = {"Content-Length: 0\r\n",19};
+static str content_len_hdr_s  =	{"Content-Length: ",16};
+static str content_len_hdr_e  = {"\r\n",2};
+static str max_fwds_hdr 	  = {"Max-Forwards: 10\r\n",18};
+static str contact_s 		  = {"Contact: <",10};
+static str contact_e 		  = {">\r\n",3};
+static str route_s 			  = {"Route: <",8};
+static str route_e 			  = {">\r\n",3};
+static str service_hdr_s 	  = {"Service: ", 9};
+static str service_hdr_e 	  = {"\r\n", 2};
+static str content_type_hdr   = {"Content-Type: application/pidf+xml\r\n",36};
+static str esqk_hdr_name 	  = {"ESQK",4};
+static str psap_uri_hdr_name  = {"PSAP-URI",8};
 
 extern int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 
@@ -325,7 +318,6 @@ error:
 	.orig = val, \
 };
 
-static fparam_t fp_310 = FParam_INT(310);
 static fparam_t fp_int_err = FParam_STRING("Internal Error");
 
 /* callback function for the OPTIONS reply
@@ -336,38 +328,27 @@ static fparam_t fp_int_err = FParam_STRING("Internal Error");
 void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 
 	struct initial_tr * cb_par;
-	struct cell* inv_trans, * crt_trans;
-	enum route_mode crt_rmode;
+	struct cell* inv_trans;
 
-	LOG(L_DBG, "DBG:"M_NAME":options_resp_cb: received an %i answer for trans %p, req %p, repl %p\n", 
-			ps->code, t, ps->req, ps->rpl);
+	LM_DBG("received an %i answer for trans %p, req %p, repl %p\n",	ps->code, t, ps->req, ps->rpl);
 
 	cb_par = *((struct initial_tr **)ps->param);
 	
-	LOG(L_DBG, "DBG:"M_NAME":options_resp_cb: cb_par:%p index: %u label: %u callid: %.*s\n", 
+	LM_DBG("cb_par:%p index: %u label: %u callid: %.*s\n", 
 			cb_par, cb_par->hash_index, cb_par->label, cb_par->callid.len, cb_par->callid.s);
 
-	if(tmb.t_enter_ctx(cb_par->hash_index, cb_par->label,
-		&crt_rmode, MODE_REQUEST, &crt_trans, &inv_trans)!=0){
-		
-		LOG(L_ERR, "ERR:"M_NAME":options_resp_cbp: could not switch to the INVITE transaction\n");
-		//tmb.t_unref_ident(t->hash_index, t->label);
+	if (tmb.t_lookup_ident(&inv_trans, cb_par->hash_index, cb_par->label) < 0) {                                                                                                                                                                                                                      
+		LM_ERR("transaction not found %d:%d\n", cb_par->hash_index, cb_par->label);                                                                   
 		goto error;
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":options_resp_cb: invite trans %p callid: %.*s\n", 
-			inv_trans, inv_trans->callid.len, inv_trans->callid.s);
-
 	if(E_process_options_repl(ps->rpl, inv_trans, ps->code)<0){
-	
-		LOG(L_ERR, "ERR:"M_NAME":options_resp_cb:Could not process the OPTIONS response\n");
-		sl_reply(inv_trans->uas.request, (char*)&fp_310, (char*)&fp_int_err);
+		LM_ERR("Could not process the OPTIONS response\n");
+		tmb.t_reply(inv_trans->uas.request, 500, (char*)&fp_int_err);
 	}
 
-
 	//set the OPTIONS trans as the current one
-	tmb.t_exit_ctx(t, crt_rmode);
-	LOG(L_DBG, "DBG:"M_NAME":options_resp_cb: ref count of the invite trans is %i\n", inv_trans->ref_count);
+	tmb.t_sett(t, T_BR_UNDEFINED);
 
 error:
 	//clean the callback parameters 
@@ -386,6 +367,7 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 	struct initial_tr * cb_par;
 	int content_len;
 	str content_len_str;
+	uac_req_t uac_r;
 	
 	LOG(L_DBG,"DBG:"M_NAME":send_options_req: OPTIONS to <%.*s>, service %.*s\n",
 		req_uri.len, req_uri.s, service.len, service.s);
@@ -429,8 +411,8 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	char * p = (char*)shm_malloc(sizeof(struct initial_tr)+sizeof(char)*inv_tr->callid.len);
 	if(!p){
-		LOG(L_ERR,"ERR:"M_NAME":send_options_req: Error allocating cb_par: %d bytes\n",
-				sizeof(struct initial_tr)+sizeof(char)*inv_tr->callid.len);
+		LM_ERR("Error allocating cb_par: %d bytes\n",
+				(int)(sizeof(struct initial_tr)+sizeof(char)*inv_tr->callid.len));
 		goto error;
 	}
 	cb_par = (struct initial_tr *)p;
@@ -468,16 +450,12 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	LOG(L_DBG, "DBG:"M_NAME":send_options_req: headers are: \n%.*s, cb_par:%p index: %u label: %u\n", 
 			h.len, h.s, cb_par, cb_par->hash_index, cb_par->label);
-#ifdef SER_MOD_INTERFACE
-/* TODO
-typedef int (*req_t)(uac_req_t *uac_r, str* ruri, str* to, str* from, str *next_hop);*/
-#else
-	if (tmb.t_request(&options_method, &req_uri, &lrf_sip_uri_str, &ecscf_name_str, &h, &location, &lrf_sip_uri_str,
-                 options_resp_cb, (void*)cb_par)<0){
+
+	set_uac_req(&uac_r, &options_method, &h, &location, 0, TMCB_LOCAL_COMPLETED, options_resp_cb, (void*)cb_par);
+	if (tmb.t_request(&uac_r, &req_uri, &lrf_sip_uri_str, &ecscf_name_str, &lrf_sip_uri_str) < 0) {
                 LOG(L_ERR,"ERR:"M_NAME":send_options_req: Error sending in transaction\n");
                 goto error;
-        }
-#endif
+    }
 	
 	if (h.s) pkg_free(h.s);
 	return 1;
@@ -492,18 +470,19 @@ static str anonym_user = {"sip:anonymous@domain.org", 24};
 /* Find the appropriate psap uri that the request should be forwarded to, by querying the LRF
  * @param msg - the sip request
  * @param str1 
- * @param str2 - not used
+ * @param str2 
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
  */
-int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
+int E_query_LRF(struct sip_msg* msg, char* direction, char* str2){
 
 	e_dialog* d;
 	str call_id, from_uri;
 	str location_str = {0, 0};
 	str service, req_uri = {0,0};
 	struct initial_tr inv_tr;
-
-	enum e_dialog_direction dir = get_dialog_direction(str1);
+	struct cell     *t;
+	
+	enum e_dialog_direction dir = get_dialog_direction(direction);
 	if(dir == DLG_MOBILE_UNKNOWN){
 		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF: error invalid argument str1\n");
 		return CSCF_RETURN_FALSE;
@@ -563,14 +542,17 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message did not contain supported location information\n");
 	}
 
+	t = tmb.t_gett();
+	if (!t || t == T_UNDEFINED) {
+        LM_ERR("could not retrive  label of the current message's transaction\n");
+        goto ret_false;
+    }
 
-	if(tmb.t_get_trans_ident(msg, &inv_tr.hash_index, &inv_tr.label) != 1){
-		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:could not retrive hash_index and label of the current message's transaction\n");
-		goto ret_false;
-	}
-
+	inv_tr.hash_index = t->hash_index; 
+	inv_tr.label = t->label; 
 	inv_tr.callid.len = msg->callid->len; 
 	inv_tr.callid.s = msg->callid->name.s; 
+	
 	service = msg->first_line.u.request.uri;
 
 	if(!send_options_req(req_uri, location_str, service, &inv_tr)){

@@ -50,7 +50,7 @@
 inline int find_credentials(struct sip_msg* _m, str* _realm,
 									hdr_types_t _hftype, struct hdr_field** _h);
 
-inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
+static inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
 									hdr_types_t _hftype, struct hdr_field** _h);
 
 #endif /* AUTH_API_H */

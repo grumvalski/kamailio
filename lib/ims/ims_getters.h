@@ -508,11 +508,50 @@ int cscf_del_all_headers(struct sip_msg *msg,int hdr_type);
  */
 int cscf_get_subscription_state(struct sip_msg *msg);
 
-/** 
- * Returns the corresponding request for a reply, using tm transactions.
- * @param reply - the reply to find request for
- * @returns the transactional request
+
+/**
+ * Looks for the Content-Type header and extracts its content.
+ * @param msg - the sip message
+ * @returns the content-type string, or an empty string if not found
  */
-struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
+str cscf_get_content_type(struct sip_msg *msg);
+
+/**
+ * Looks for the Content-length header and extracts its content
+ * @param msg - the sip message
+ * @returns the content length or 0 if not found
+ */
+int cscf_get_content_len(struct sip_msg *msg);
+
+/**
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
+ */
+struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name);
+
+/**
+ * Replace a string in a message with another one.
+ * \note the orig string MUST be allocated in the limits of msg->buf.
+ * @param msg - the SIP message to modify 
+ * @param orig - the string to be replaced
+ * @param repl - string to replace with
+ * @returns 1 on success 0 on fail (the original string was not in the original SIP message)
+ */
+int cscf_replace_string(struct sip_msg *msg, str orig,str repl);
+
+/* Cleans non SHM lumps that were added to the message in order to forward it, for example                                                                                                                                                                                     
+ * otherwise, if it is a request and an error response is received, run_failure_handlers from the TM will probably crash
+ */
+void cscf_del_nonshm_lumps(struct sip_msg *msg);
+
+/* returns 1 if given extension is in Supported headers, 
+ * 0 if not or an error occurred while parsing */
+int supports_extension(struct sip_msg *m, str *extension);
+
+/* returns 1 if given extension is in Require headers, 
+ * 0 if not or an error occurred while parsing */
+int requires_extension(struct sip_msg *m, str *extension);
 #endif
 

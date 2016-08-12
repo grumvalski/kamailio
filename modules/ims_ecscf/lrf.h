@@ -60,7 +60,7 @@ struct initial_tr {
 
 enum user_id_type{SIP_URI_ID=1, CONTACT_ADDR_ID};
 
-int E_query_LRF(struct sip_msg* msg, char* str1, char* str2);
+int E_query_LRF(struct sip_msg* msg, char* direction, char* str2);
 
 int E_get_location(struct sip_msg* msg, char* str1, char* str2);
 

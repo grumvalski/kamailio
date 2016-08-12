@@ -70,9 +70,8 @@
 #include "../../socket_info.h"
 #include "../../timer.h"
 #include "../../locking.h"
+#include "../../mod_fix.h" 
 #include "../../modules/tm/tm_load.h"
-#include "../../modules/ims_dialog/dlg_load.h"
-#include "../../modules/ims_dialog/dlg_hash.h"
 #include "../../lib/lost/client.h"
 
 #include "dlg_state.h"
@@ -84,6 +83,7 @@ MODULE_VERSION
 static int mod_init(void);
 static int mod_child_init(int rank);
 static void mod_destroy(void);
+
 
 /* parameters storage */
 char* ecscf_name="sip:ecscf.open-ims.test:7060";	/**< SIP URI of this E-CSCF */
@@ -101,7 +101,6 @@ int use_default_psap = 1;				/* policy to enable/disable using a default PSAP */
 char * default_psap_uri = "sip:default_psap@open-ims.test";	/* the URI for the default PSAP */
 str default_psap_uri_str = {0,0};
 enum user_id_type user_id = SIP_URI_ID;
-struct dlg_binds dlgb;
 
 str ecscf_name_str;					/**< SIP URI of the node>*/
 str ecscf_record_route_mo;					/**< Record-route for originating case 				*/
@@ -125,19 +124,19 @@ int E_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
  * E_add_record_route - add a Record-Route header containing the SIP URI of the ecscf for mobile orig
  */
 static cmd_export_t ecscf_cmds[]={
-	{"E_is_in_dialog",				E_is_in_dialog, 			1, 0, REQUEST_ROUTE},
-	{"E_is_anonymous_user",			E_is_anonymous_user, 			0, 0, REQUEST_ROUTE},
-	{"E_trans_in_processing",		E_trans_in_processing, 			0, 0, REQUEST_ROUTE},
-	{"E_save_dialog",				E_save_dialog,				2, 0, REQUEST_ROUTE},
-	{"E_update_dialog",				E_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"E_drop_dialog",				E_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
-	{"E_get_location",				E_get_location,				1, 0, REQUEST_ROUTE},
-	{"E_query_LRF",					E_query_LRF,				1, 0, REQUEST_ROUTE},
-	{"E_add_rr",					E_add_record_route,			0, 0, REQUEST_ROUTE},
-	{"E_del_ESQK_info",				E_del_ESQK_info,			0, 0, REQUEST_ROUTE},
-	{"E_replace_to_header",				E_replace_to_header,			1, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
-	{"E_replace_from_header",			E_replace_from_header,			1, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
-	{"E_fwded_dialog",				E_fwded_dialog,				1, 0, REQUEST_ROUTE},
+	{"E_is_in_dialog",				E_is_in_dialog, 			1, 0, 0, REQUEST_ROUTE},
+	{"E_is_anonymous_user",			E_is_anonymous_user, 		0, 0, 0, REQUEST_ROUTE},
+	{"E_trans_in_processing",		E_trans_in_processing, 		0, 0, 0, REQUEST_ROUTE},
+	{"E_save_dialog",				E_save_dialog,				2, 0, 0, REQUEST_ROUTE},
+	{"E_update_dialog",				E_update_dialog, 			1, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"E_drop_dialog",				E_drop_dialog, 				1, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"E_get_location",				E_get_location,				1, 0, 0, REQUEST_ROUTE},
+	{"E_query_LRF",					E_query_LRF,				1, 0, 0, REQUEST_ROUTE},
+	{"E_add_rr",					E_add_record_route,			0, 0, 0, REQUEST_ROUTE},
+	{"E_del_ESQK_info",				E_del_ESQK_info,			0, 0, 0, REQUEST_ROUTE},
+	{"E_replace_to_header",			E_replace_to_header,		1, 0, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
+	{"E_replace_from_header",		E_replace_from_header,		1, 0, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
+	{"E_fwded_dialog",				E_fwded_dialog,				1, 0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -146,46 +145,40 @@ static cmd_export_t ecscf_cmds[]={
  * - name - name of the E-CSCF
  */	
 static param_export_t ecscf_params[]={ 
-	{"name", 			STR_PARAM, 		&ecscf_name},
+	{"name",					STR_PARAM, 		&ecscf_name},
 	{"dialogs_hash_size",		INT_PARAM,		&ecscf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM,		&ecscf_dialogs_expiration_time},
 	{"dialogs_enable_release",	INT_PARAM,		&ecscf_dialogs_enable_release},
 	{"max_dialog_count",		INT_PARAM,		&ecscf_max_dialog_count},
-	{"min_se", 			INT_PARAM, 		&ecscf_min_se},
-	{"lrf_sip_uri",			STR_PARAM, 		&lrf_sip_uri},
+	{"min_se",					INT_PARAM, 		&ecscf_min_se},
+	{"lrf_sip_uri",				STR_PARAM, 		&lrf_sip_uri},
 	{"use_default_psap",		INT_PARAM, 		&use_default_psap},
-	{"user_id_type",		INT_PARAM, 		&user_id},
+	{"user_id_type",			INT_PARAM, 		&user_id},
 	{"default_psap_uri",		STR_PARAM, 		&default_psap_uri},
 	{0,0,0} 
 };
 
 /** module exports */
 struct module_exports exports = {
-	"ecscf", 
+	"ims_ecscf", 
+	DEFAULT_DLFLAGS,
 	ecscf_cmds,
-	0,
 	ecscf_params,
-	
-	mod_init,			/* module initialization function */
-	0,				/* response function*/
-	mod_destroy,			/* destroy function */
-	0,				/* onbreak function */
-	mod_child_init			/* per-child init function */
+	0, /* exported statistics */                                                                                                                                                                                                                                   
+	0, /* exported MI functions */
+	0, /* exported pseudo-variables */
+	0, /* extra processes */
+	mod_init, /* module initialization function */
+	0, mod_destroy, 
+	mod_child_init /* per-child init function */
 };
-
 
 /* Global variables and imported functions */
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 										/**< link to the stateless reply function in sl module */
 
 struct tm_binds tmb;            						/**< Structure with pointers to tm funcs 		*/
-dlg_func_t dialogb;								/**< Structure with pointers to dialog funcs			*/
 extern e_dialog_hash_slot *e_dialogs;						/**< the dialogs hash table				*/
-
-
-static str path_str_s={"Path: <",7};
-static str path_str_1={"sip:term@",9};
-static str path_str_e={";lr>\r\n",6};
 
 static str s_record_route_s={"Record-Route: <",15};
 static str s_mo = {"sip:mo@",7};
@@ -264,7 +257,6 @@ int fix_parameters()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
-	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
@@ -289,11 +281,6 @@ static int mod_init(void)
 	if (load_tm(&tmb) == -1)
 		goto error;
 
-	/* bind to the dialog module */
-	if (load_dlg_api(&dlgb) != 0) { /* load the dialog API */                                                                                                                                                                                                                  
-        LM_ERR("can't load Dialog API\n");
-        goto error;
-    }
 	/* init the dialog storage */
 	if (!e_dialogs_init(ecscf_dialogs_hash_size)){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
@@ -348,9 +335,9 @@ static void mod_destroy(void)
 	if (do_destroy){
 		/* Then nuke it all */		
 		e_dialogs_destroy();
-        	lock_get(ecscf_dialog_count_lock);
-	        shm_free(ecscf_dialog_count);
-        	lock_destroy(ecscf_dialog_count_lock);
+		lock_get(ecscf_dialog_count_lock);
+		shm_free(ecscf_dialog_count);
+		lock_destroy(ecscf_dialog_count_lock);
 	}
 	
 }

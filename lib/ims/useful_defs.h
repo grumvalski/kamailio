@@ -82,3 +82,17 @@
 #define STR_APPEND(dst,src)\
 	{memcpy((dst).s+(dst).len,(src).s,(src).len);\
 	(dst).len = (dst).len + (src).len;}
+
+#define str_case_equals(a,b)\
+{\
+    int i;\
+    if (!a) {\
+        if (!b) return 0;\
+        else return (b->len == 0) ? 0 : 1;\
+    }\
+    if (!b) return (a->len == 0) ? 0 : 1;\
+    if (a->len != b->len) return 1;\
+    for (i = 0; i < a->len; i++)\
+        if (a->s[i] != b->s[i]) return 1;\
+    return 0;\
+}

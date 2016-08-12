@@ -46,12 +46,6 @@ static str sup_ptypes[] = {
 	str_init("TCP/TLS/MSRP"),
 	{ NULL, 0}
 };
-#ifndef SER_MOD_INTERFACE
-	#define LM_ERR(s)\
-		LOG(L_ERR, "ERR:"M_NAME#s);
-	#define LM_DBG(s)\
-		LOG(L_DBG, "DBG:"M_NAME#s);
-#endif
 
 #define READ(val) \
 	(*(val + 0) + (*(val + 1) << 8) + (*(val + 2) << 16) + (*(val + 3) << 24))
@@ -68,38 +62,6 @@ static str sup_ptypes[] = {
 #define one_of_8( _x , _t ) \
 	(_x==_t[0]||_x==_t[7]||_x==_t[1]||_x==_t[2]||_x==_t[3]||_x==_t[4]\
 	||_x==_t[5]||_x==_t[6])
-
-
-/*
- * ser_memmem() returns the location of the first occurrence of data
- * pattern b2 of size len2 in memory block b1 of size len1 or
- * NULL if none is found. Obtained from NetBSD.
- */
-static void * ser_memmem(const void *b1, const void *b2, size_t len1, size_t len2)
-{
-	/* Initialize search pointer */
-	char *sp = (char *) b1;
-
-	/* Initialize pattern pointer */
-	char *pp = (char *) b2;
-
-	/* Initialize end of search address space pointer */
-	char *eos = sp + len1 - len2;
-
-	/* Sanity check */
-	if(!(b1 && b2 && len1 && len2))
-		return NULL;
-
-	while (sp <= eos) {
-		if (*sp == *pp)
-			if (memcmp(sp, pp, len2) == 0)
-				return sp;
-
-			sp++;
-	}
-
-	return NULL;
-}
 
 
 int get_mixed_part_delimiter(str* body, str *mp_delimiter)

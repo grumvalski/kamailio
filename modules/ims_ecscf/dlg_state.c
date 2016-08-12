@@ -56,15 +56,10 @@
 #include "../../parser/parse_rr.h"
 #include "../../parser/parse_from.h"
 #include "../../parser/parse_to.h"
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/sl/sl_funcs.h"
-#else
-	#include "../../modules/sl/sl_funcs.h"
-#endif
+#include "../../modules/sl/sl_funcs.h"
 
 #include "../../lib/ims/ims_getters.h"
 
-extern int debug;
 extern struct tm_binds tmb;
 
 int e_dialogs_hash_size;						/**< size of the dialog hash table 					*/
@@ -83,8 +78,6 @@ time_t d_time_now;								/**< dialogs current time							*/
 extern int ecscf_min_se;
 
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
-int supports_extension(struct sip_msg *m, str *extension);
-int requires_extension(struct sip_msg *m, str *extension);
 
 
 #define strtotime(src,dest) \
@@ -196,21 +189,18 @@ void e_dialogs_destroy()
  * Locks the required slot of the dialog hash table.
  * @param hash - index of the slot to lock
  */
-inline void d_lock(unsigned int hash)
+void d_lock(unsigned int hash)
 {
-//	LOG(L_CRIT,"GET %d\n",hash);
 	lock_get(e_dialogs[(hash)].lock);
-//	LOG(L_CRIT,"GOT %d\n",hash);	
 }
 
 /**
  * UnLocks the required slot of the dialog hash table
  * @param hash - index of the slot to unlock
  */
-inline void d_unlock(unsigned int hash)
+void d_unlock(unsigned int hash)
 {
 	lock_release(e_dialogs[(hash)].lock);
-//	LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
 /**
@@ -230,7 +220,7 @@ extern gen_lock_t* ecscf_dialog_count_lock;
 /**
  * Locks the dialog counter variable
  */
-inline void e_dialog_count_lock()
+static inline void e_dialog_count_lock()
 {
 	lock_get(ecscf_dialog_count_lock);
 }
@@ -238,7 +228,7 @@ inline void e_dialog_count_lock()
 /**
  * UnLocks the dialog counter variable
  */
-inline void e_dialog_count_unlock()
+static inline void e_dialog_count_unlock()
 {
         lock_release(ecscf_dialog_count_lock);
 }
@@ -248,7 +238,7 @@ inline void e_dialog_count_unlock()
  * Try to increment the dialog count
  * @returns 1 on success or 0 if the total number of dialogs is already reached
  */
-inline int e_dialog_count_increment ()
+static inline int e_dialog_count_increment ()
 {
     if (ecscf_max_dialog_count<0) return 1;
     e_dialog_count_lock();	
@@ -266,7 +256,7 @@ inline int e_dialog_count_increment ()
 /**
  * Decrement the dialog count
  */
-inline void e_dialog_count_decrement()
+static inline void e_dialog_count_decrement()
 {
     if (ecscf_max_dialog_count<0) return ;
     e_dialog_count_lock();
@@ -642,14 +632,13 @@ void print_e_dialogs(int log_level)
 {
 	e_dialog *d;
 	int i;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
-	LOG(log_level,"INF:"M_NAME":----------  E-CSCF Dialog List begin --------------\n");
+	LOG(log_level,"----------  E-CSCF Dialog List begin --------------\n");
 	for(i=0;i<e_dialogs_hash_size;i++){
 		d_lock(i);
 			d = e_dialogs[i].head;
 			while(d){
-				LOG(log_level,"INF:"M_NAME":[%4d] Dir["ANSI_MAGENTA"%d"ANSI_GREEN
+				LOG(log_level,"[%4d] Dir["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] Call-ID:<"ANSI_BLUE"%.*s"ANSI_GREEN
 					"> AOR:<"ANSI_RED"%.*s"ANSI_GREEN
 					">\n",i,				
@@ -657,7 +646,7 @@ void print_e_dialogs(int log_level)
 					d->call_id.len,d->call_id.s,
 					d->aor.len,d->aor.s);
 
-				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
+				LOG(log_level,"\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN
 					"] Ref:["ANSI_MAGENTA"%.*s"ANSI_GREEN
@@ -674,7 +663,7 @@ void print_e_dialogs(int log_level)
 			} 		
 		d_unlock(i);
 	}
-	LOG(log_level,"INF:"M_NAME":----------  E-CSCF Dialog List end   --------------\n");	
+	LOG(log_level,"----------  E-CSCF Dialog List end   --------------\n");	
 }
 
 
@@ -1163,6 +1152,23 @@ error:
 	return 0;	
 }
 
+/**                                                                                                                                  
+   * Returns the corresponding request for a reply, using tm transactions.                                                             
+   * @param reply - the reply to find request for                                                                                      
+   * @returns the transactional request                                                                                                
+   */                                                                                                                                  
+static  struct sip_msg* get_request_from_reply(struct sip_msg *reply)                                                                   
+{                                                                                                                                    
+	struct cell *t;                                                                                                                  
+	t = tmb.t_gett();                                                                                                                
+	if (!t || t==(void*) -1){                                                                                                        
+		LM_ERR("Reply without transaction\n");                                          
+		return 0;                                                                                                                    
+	}                                                                                                                                
+	if (t) return t->uas.request;                                                                                                    
+		else return 0;                                                                                                                   
+}
+
 /**
  * Updates a dialog.
  * If the initial request was:
@@ -1304,7 +1310,7 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				}				
 		}else{
 			/* reply to subsequent request */			
-			if (!req) req = cscf_get_request_from_reply(msg);
+			if (!req) req = get_request_from_reply(msg);
 			
 			/* destroy dialogs on specific methods */
 			switch (d->method){

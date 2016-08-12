@@ -480,6 +480,8 @@ struct sip_msg*  sip_msg_shm_clone( struct sip_msg *org_msg, int *sip_msg_len,
 		case HDR_PATH_T:
 		case HDR_PRIVACY_T:
 		case HDR_REASON_T:
+		case HDR_GEOLOCATION_T:
+		case HDR_ESQK_T:
 			/* we ignore them for now even if they have something parsed*/
 			break;
 		}/*switch*/
@@ -910,6 +912,11 @@ struct sip_msg*  sip_msg_shm_clone( struct sip_msg *org_msg, int *sip_msg_len,
 		case HDR_PRIVACY_T:
 			if (!HOOK_SET(privacy)) {
 				new_msg->privacy = new_hdr;
+			}
+			break;
+		case HDR_GEOLOCATION_T:
+			if (!HOOK_SET(geolocation)) {
+				new_msg->geolocation = new_hdr;
 			}
 			break;
 		}/*switch*/

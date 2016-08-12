@@ -49,8 +49,8 @@
 
 #include "../../parser/msg_parser.h"
 #include "../../dset.h"
+#include "../../lib/ims/ims_getters.h"
 #include "dlg_state.h"
-#include "sip.h"
 
 static str route_s={"Route: <",8};
 static str route_e={">\r\n",3};

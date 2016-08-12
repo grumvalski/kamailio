@@ -146,16 +146,21 @@ typedef struct {
 	gen_lock_t *lock;					/**< slot lock 									*/	
 } e_dialog_hash_slot;
 
-
-inline unsigned int get_e_dialog_hash(str call_id);
-
 int e_dialogs_init(int hash_size);
 
 void e_dialogs_destroy();
 
-inline void d_lock(unsigned int hash);
-inline void d_unlock(unsigned int hash);
+/**
+ * Locks the required slot of the dialog hash table.
+ * @param hash - index of the slot to lock
+ */
+void d_lock(unsigned int hash);
 
+/**
+ * UnLocks the required slot of the dialog hash table
+ * @param hash - index of the slot to unlock
+ */
+void d_unlock(unsigned int hash);
 
 e_dialog* new_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 e_dialog* add_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
