@@ -47,9 +47,11 @@
  * 	email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
+#include "../../dprint.h"
+#include "../../mem/mem.h"
+#include "../../mem/shm_mem.h"
 #include "client.h"
 #include "parsing.h"
-#include "../cds/memory.h"
 
 static struct curl_slist *headers=NULL;
 static char errorBuffer[CURL_ERROR_SIZE];
@@ -100,31 +102,31 @@ int init_lost_lib(){
 
 	if(xmlInitMemory()){
 	
-		ERROR_LOG("Failed to initialize teh memory layer from libxml\n");
+		LM_ERR("Failed to initialize teh memory layer from libxml\n");
 		return -1;
 	}
 
 	if(xmlMemGet(&defaultXmlFreeFunc, &defaultXmlMallocFunc, 
 				&defaultXmlReallocFunc, &defaultXmlStrdupFunc)){
-		ERROR_LOG("Failed to get the default memory functions from libxml\n");
+		LM_ERR("Failed to get the default memory functions from libxml\n");
 		return -1;
 	}
 
 	if(xmlMemSetup(my_pkg_free, my_pkg_malloc, my_pkg_realloc, my_pkg_strdup)){
 	
-		ERROR_LOG("Failed to set the pkg memory functions to libxml\n");
+		LM_ERR("Failed to set the pkg memory functions to libxml\n");
 		return -1;
 	}
 
 	headers = curl_slist_append(headers, LOST_CONTENT_TYPE);
 	if(!headers){
-		ERROR_LOG("Failed to initialize header content type\n");
+		LM_ERR("Failed to initialize header content type\n");
 		return -1;
 	}
 
 	headers = curl_slist_append(headers, LOST_CACHE_CONTROL);
 	if(!headers){
-		ERROR_LOG("Failed to initialize header cache control\n");
+		LM_ERR("Failed to initialize header cache control\n");
 		return -1;
 	}
 
@@ -142,7 +144,7 @@ void end_lost_lib(){
 
 	if(xmlMemSetup(defaultXmlFreeFunc, defaultXmlMallocFunc, defaultXmlReallocFunc, defaultXmlStrdupFunc)){
 	
-		ERROR_LOG("Failed to set the default memory functions to libxml\n");
+		LM_ERR("Failed to set the default memory functions to libxml\n");
 	}
 
 }
@@ -174,32 +176,32 @@ CURL* lost_http_conn(char *url, int port, str * chunk){
 	conn = curl_easy_init();
        
 	if (conn == NULL){
-		ERROR_LOG("Failed to create CURL connection\n");
+		LM_ERR("Failed to create CURL connection\n");
  		return NULL;
  	}
  
 	code = curl_easy_setopt(conn, CURLOPT_ERRORBUFFER, errorBuffer);
 	if (code != CURLE_OK){
-		ERROR_LOG("Failed to set error buffer [%d]\n", code);
+		LM_ERR("Failed to set error buffer [%d]\n", code);
 	 	return NULL;
 	}
  
 	code = curl_easy_setopt(conn, CURLOPT_URL, url);
 	if (code != CURLE_OK){
-		ERROR_LOG("Failed to set URL [%s]\n", errorBuffer);
+		LM_ERR("Failed to set URL [%s]\n", errorBuffer);
 		return NULL;
 	}
 
 	code = curl_easy_setopt(conn, CURLOPT_PORT, port);
 	if(code != CURLE_OK){
-		ERROR_LOG("Failed to set port [%i]\n", port);
+		LM_ERR("Failed to set port [%i]\n", port);
 		return NULL;
 	}
 	/*re-send the same request on the new location and follow 
 	 * new Location: headers all the way until no more such headers are returned*/
 	code = curl_easy_setopt(conn, CURLOPT_FOLLOWLOCATION, 1L);
 	if (code != CURLE_OK){
-		ERROR_LOG("Failed to set redirect option [%s]\n", errorBuffer);
+		LM_ERR("Failed to set redirect option [%s]\n", errorBuffer);
 		return NULL;
 	}
 
@@ -228,7 +230,7 @@ int create_lost_req(xmlNode* location, char* service, loc_fmt d_loc_fmt, str* lo
 	int req_len = 0;
 
 	if(d_loc_fmt == ERR_LOC){
-		ERROR_LOG("cannot use location with errornous format\n");
+		LM_ERR("cannot use location with errornous format\n");
 		goto error;
 	}
 
@@ -238,63 +240,63 @@ int create_lost_req(xmlNode* location, char* service, loc_fmt d_loc_fmt, str* lo
    	doc= xmlNewDoc(BAD_CAST "1.0");
    	if(doc== NULL){
 
-   		ERROR_LOG("when creating new xml doc\n");
+   		LM_ERR("when creating new xml doc\n");
    		goto error;
    	}
    	root_node = xmlNewNode(NULL, BAD_CAST LOST_FIND_SERVICE_CMD);
    	if(root_node==0){
 
-   		ERROR_LOG("when adding new node %s\n", LOST_FIND_SERVICE_CMD);
+   		LM_ERR("when adding new node %s\n", LOST_FIND_SERVICE_CMD);
    		goto error;
    	}
    	xmlDocSetRootElement(doc, root_node);
 
 	if(!xmlNewNs(root_node, BAD_CAST LOST_NS_HREF, NULL)){
-		ERROR_LOG("could not add the namespace %s to the root node\n",
+		LM_ERR("could not add the namespace %s to the root node\n",
 				LOST_NS_HREF);
 		goto error;
 	}
 
 	loc_node = xmlNewNode(NULL, BAD_CAST LOST_LOCATION_NODE);
 	if(!loc_node){
-		ERROR_LOG("when creating new node %s\n", LOST_LOCATION_NODE);
+		LM_ERR("when creating new node %s\n", LOST_LOCATION_NODE);
 		goto error;
 	}
 
 	if(!xmlNewProp(loc_node, BAD_CAST LOST_ID_PROP , BAD_CAST id)){
 	
-		ERROR_LOG("could not add the property %s\n", LOST_ID_PROP);
+		LM_ERR("could not add the property %s\n", LOST_ID_PROP);
 		goto error;
 	}
 
 	if(!xmlNewProp(loc_node, BAD_CAST LOST_PROFILE_PROP , BAD_CAST profile)){
 	
-		ERROR_LOG("could not add the property %s\n", LOST_ID_PROP);
+		LM_ERR("could not add the property %s\n", LOST_ID_PROP);
 		goto error;
 	}
 
 	//do a recursive copy of the location information
 	loc_copy = xmlCopyNode(location, 1);
 	if(!loc_copy){
-		ERROR_LOG("could not duplicate the location information node\n");
+		LM_ERR("could not duplicate the location information node\n");
 		goto error;
 	}
 
 	if(!xmlAddChild(loc_node, loc_copy)){
-		ERROR_LOG("could not add the location information to the location node\n");
+		LM_ERR("could not add the location information to the location node\n");
 		goto error;
 	}
 	loc_copy = NULL;
 
 	if(!xmlAddChild(root_node, loc_node)){
-		ERROR_LOG("could not add the %s node to root\n", LOST_LOCATION_NODE);
+		LM_ERR("could not add the %s node to root\n", LOST_LOCATION_NODE);
 		goto error;
 	}
 
 	loc_node = NULL;
 	if(!xmlNewChild(root_node, NULL, BAD_CAST LOST_SERVICE_NODE, BAD_CAST service)){
 	
-		ERROR_LOG("could not add the %s node to root\n", LOST_SERVICE_NODE);
+		LM_ERR("could not add the %s node to root\n", LOST_SERVICE_NODE);
 		goto error;
 	}
 	//print_element_names(root_node);
@@ -303,11 +305,11 @@ int create_lost_req(xmlNode* location, char* service, loc_fmt d_loc_fmt, str* lo
 	lost_req->s = (char*) req_body;
 	lost_req->len = req_len;
 	if(!lost_req->s || !lost_req->len){
-		ERROR_LOG("could not output the xml document\n");
+		LM_ERR("could not output the xml document\n");
 		goto error;
 	}
 
-	//DEBUG_LOG("lost request: %.*s\n", lost_req->len, lost_req->s);
+	//LM_DBG("lost request: %.*s\n", lost_req->len, lost_req->s);
 
 	xmlFreeDoc(doc);
 
@@ -326,25 +328,25 @@ int send_POST_data(CURL* connhandle, str data){
 
 	//set headers
 	if(curl_easy_setopt(connhandle, CURLOPT_HTTPHEADER, headers) != CURLE_OK){
-		ERROR_LOG("Failed to set headers: %s\n", errorBuffer);
+		LM_ERR("Failed to set headers: %s\n", errorBuffer);
 		return -1;
 	}
 
 	//CURLOPT_POSTFIELDS options to specify what data to post
 	if(curl_easy_setopt(connhandle, CURLOPT_POSTFIELDS, data.s) != CURLE_OK){
-		ERROR_LOG("Failed to set data: %s\n", errorBuffer);
+		LM_ERR("Failed to set data: %s\n", errorBuffer);
 		return -1;
 	}
 
 	//CURLOPT_POSTFIELDSIZE set the data size
 	if(curl_easy_setopt(connhandle, CURLOPT_POSTFIELDSIZE, data.len) != CURLE_OK){
-		ERROR_LOG("Failed to set content length: %s\n", errorBuffer);
+		LM_ERR("Failed to set content length: %s\n", errorBuffer);
 		return -1;
 	}
 	
 	/* post away! */
 	if(curl_easy_perform(connhandle) != CURLE_OK){
-		ERROR_LOG("Failed to send the request: %s\n", errorBuffer);
+		LM_ERR("Failed to send the request: %s\n", errorBuffer);
 		return -1;
 	}
 
@@ -374,25 +376,25 @@ xmlNode* get_LoST_resp_type(str response, lost_resp_type * resp_type, str * reas
 #endif
 
 	if(strcmp((char*)root->name, LOST_ERR_NODE_NAME) == 0){
-		DEBUG_LOG("LoST response has an error response\n");
+		LM_DBG("LoST response has an error response\n");
 		
 		node = child_node(root);
 		if(node){
-			DEBUG_LOG("reason %s\n", node->name);
+			LM_DBG("reason %s\n", node->name);
 			reason->s = (char*)node->name;
 			reason->len = strlen(reason->s);			
 #ifdef LOST_DEBUG
 			print_attr(node, LOST_MSG_ATTR_NAME);
 #endif
 		}else {
-			DEBUG_LOG("the message has no reason\n");
+			LM_DBG("the message has no reason\n");
 		}
 
 		*resp_type = LOST_ERR;
 
 	} else if(strcmp((char*)root->name, LOST_REDIR_NODE_NAME) == 0){
 
-		DEBUG_LOG("LoST response has a redirect response\n");
+		LM_DBG("LoST response has a redirect response\n");
 #ifdef LOST_DEBUG		
 		print_attr(root, LOST_TGT_ATTR_NAME);
 #endif
@@ -400,23 +402,23 @@ xmlNode* get_LoST_resp_type(str response, lost_resp_type * resp_type, str * reas
 
 	} else 	if(strcmp((char*)root->name, LOST_FINDSRESP_NODE_NAME) != 0){
 
-		ERROR_LOG("invalid LoST response\n");
+		LM_ERR("invalid LoST response\n");
 		*resp_type = LOST_ERR;
 
 	} else {
 		
 		node = child_named_node(root, LOST_WRNG_NODE_NAME);
 		if(node){
-			DEBUG_LOG("LoST response has a response with warning\n");
+			LM_DBG("LoST response has a response with warning\n");
 			if((child = child_node(node))){
-				DEBUG_LOG("reason %s\n", child->name);
+				LM_DBG("reason %s\n", child->name);
 				reason->s = (char*)child->name;
 				reason->len = strlen(reason->s);			
 #ifdef LOST_DEBUG
 				print_attr(node, LOST_MSG_ATTR_NAME);
 #endif
 			}else {
-				DEBUG_LOG("warning without reason\n");
+				LM_DBG("warning without reason\n");
 			}
 
 			*resp_type = LOST_WRNG;
@@ -443,12 +445,12 @@ str get_mapped_psap(xmlNode* root, expire_type * exp_type, time_t* exp_timestamp
 	char * expires_str;
 
 	if(!(mapping = child_named_node(root, LOST_MAPPING_NODE_NAME))){
-		ERROR_LOG("Could not find a mapping element in the LoST response\n");
+		LM_ERR("Could not find a mapping element in the LoST response\n");
 		return shm_uri;
 	}
 
 	if(!(uri = child_named_node(mapping, LOST_URI_NODE_NAME))){
-		ERROR_LOG("Could not find any uri child on the mapping element in the LoST response\n");
+		LM_ERR("Could not find any uri child on the mapping element in the LoST response\n");
 		return shm_uri;
 	}
 
@@ -456,22 +458,22 @@ get_uri:
 	content = xmlNodeGetContent((xmlNodePtr)uri);
 	uri_str.s = (char*)content;
 	if(!uri_str.s || (uri_str.s[0] == '\0')){
-		ERROR_LOG("Could not get the content of the uri element\n");
+		LM_ERR("Could not get the content of the uri element\n");
 		return shm_uri;
 	}
 	uri_str.len = strlen(uri_str.s);
 
-	DEBUG_LOG("Found a uri: %.*s\n", uri_str.len, uri_str.s);
+	LM_DBG("Found a uri: %.*s\n", uri_str.len, uri_str.s);
 
 	//check if the uri is a well formed sip uri
 	if((parse_uri(uri_str.s, uri_str.len, parsed_uri)<0) ||  
 			((parsed_uri->type != SIP_URI_T) &&  (parsed_uri->type != SIPS_URI_T))){
 	
-		ERROR_LOG("the URI %.*s is no SIP/SIPS URI, for the moment only SIP/SIPS URIs are supported\n",
+		LM_ERR("the URI %.*s is no SIP/SIPS URI, for the moment only SIP/SIPS URIs are supported\n",
 			uri_str.len, uri_str.s);
 	
 		if(!(uri = sibling_named_node(uri, LOST_URI_NODE_NAME))){
-			ERROR_LOG("Could not find any other uri child on the mapping element in the LoST response\n");
+			LM_ERR("Could not find any other uri child on the mapping element in the LoST response\n");
 			return shm_uri;
 		}
 
@@ -479,29 +481,29 @@ get_uri:
 	}
 
 	if(!(expires_attr = get_attr(mapping, LOST_EXPIRES_ATTR_NAME))){
-		ERROR_LOG("Could not find an expires attr of mapping element in the LoST response\n");
+		LM_ERR("Could not find an expires attr of mapping element in the LoST response\n");
 		return shm_uri;
 	}	
 
 	expires_str = (char*)expires_attr->children->content;
 	if(!expires_str || !strlen(expires_str)){
-		ERROR_LOG("Expires attribute with null content\n");
+		LM_ERR("Expires attribute with null content\n");
 		return shm_uri;
 	}
 
-	DEBUG_LOG("expires is %s\n", expires_str);
+	LM_DBG("expires is %s\n", expires_str);
 
 	//get expiration time ISO 8601
 	if(get_time(expires_str, exp_type, exp_timestamp)){
 	
-		ERROR_LOG("Invalid value for the attribute expires %s\n", expires_str);
+		LM_ERR("Invalid value for the attribute expires %s\n", expires_str);
 		return shm_uri;
 	}
 
 	//copy in shm memory
-	shm_uri.s = (char*)cds_malloc(uri_str.len*sizeof(char));
+	shm_uri.s = (char*)shm_malloc(uri_str.len*sizeof(char));
 	if(!shm_uri.s){
-		ERROR_LOG("Out of shm memory\n");
+		LM_ERR("Out of shm memory\n");
 
 	}else{
 		memcpy(shm_uri.s, uri_str.s, uri_str.len*sizeof(char));

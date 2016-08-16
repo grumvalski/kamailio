@@ -50,7 +50,6 @@
  
 #include <time.h>
 
-#include "dlg_state.h"
 #include "../../modules/tm/tm_load.h"
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_rr.h"
@@ -59,10 +58,11 @@
 #include "../../modules/sl/sl_funcs.h"
 
 #include "../../lib/ims/ims_getters.h"
+#include "dlg_state.h"
 
 extern struct tm_binds tmb;
 
-int e_dialogs_hash_size;						/**< size of the dialog hash table 					*/
+//int e_dialogs_hash_size;						/**< size of the dialog hash table 					*/
 e_dialog_hash_slot *e_dialogs=0;				/**< the hash table									*/
 extern int ecscf_dialogs_expiration_time;		/**< default expiration time for dialogs			*/
 extern int ecscf_dialogs_enable_release;	/**< if to enable dialog release		*/
@@ -104,37 +104,6 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 	.type = FPARAM_STR, \
 	.orig = val, \
 };
-
-
-/**
- * Computes the hash for a string.
- * @param call_id - the string to compute for
- * @returns the hash % ecscf_dialogs_hash_size
- */
-inline unsigned int get_e_dialog_hash(str call_id)
-{
-	if (call_id.len==0) return 0;
-#define h_inc h+=v^(v>>3)
-	char* p;
-	register unsigned v;
-	register unsigned h;
-  	
-	h=0;
-	for (p=call_id.s; p<=(call_id.s+call_id.len-4); p+=4){
-		v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
-		h_inc;
-	}
-	v=0;
-	for (;p<(call_id.s+call_id.len); p++) {
-		v<<=8;
-		v+=*p;
-	}
-	h_inc;
-	
-	h=((h)+(h>>11))+((h>>13)+(h>>23));
-	return (h)%e_dialogs_hash_size;
-#undef h_inc 
-}
 
 /**
  * Initialize the E-CSCF dialogs hash table.
@@ -207,7 +176,7 @@ void d_unlock(unsigned int hash)
  * Refresh the current dialog time.
  * @returns the current time
  */
-inline int d_act_time()
+static inline int d_act_time()
 {
 	d_time_now=time(0);
 	return d_time_now;

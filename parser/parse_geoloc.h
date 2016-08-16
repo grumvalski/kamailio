@@ -39,73 +39,47 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
+ *  * \file geoloc.h
+ * 
+ * used by the Emergency-CSCF -Geolocation header parsing
+ * (conforming to the draft-ietf-sip-location-conveyance)
+ *
  * author Ancuta Onofrei, 
  * 	email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
-#ifndef LIB_LOST_CLIENT_H
-#define LIB_LOST_CLIENT_H
+
+#ifndef PARSE_GEOLOC_H
+#define PARSE_GEOLOC_H
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <errno.h>
+#include "../mem/mem.h"
+#include "../dprint.h"
+#include "../ut.h"
+#include "../str.h"
+#include "hf.h"
+#include "msg_parser.h"
 
-#define SER	1
-#include <curl/curl.h>
-//#include <curl/types.h>
-#include <curl/easy.h>
+struct loc_value{
+	struct sip_uri locURI;
+	//used to send error responses
+	str inserted_by; //mandatory
+	//used by the receiving PSAP to know according to which location, the call was routed
+	int used_for_routing; //0 for no and 1 for yes, 
+	struct loc_value * next;
+};
 
-//#include <libxml/tree.h>
-//#include <libxml/parser.h>
-//#include <libxml/HTMLparser.h>
+struct geoloc_body{
+	//implemented as a stack, the first is the last in the body content
+	struct loc_value * loc_list;
+	int retrans_par; //0 for no and 1 for yes, default no/0
+};
 
-//#include <cds/memory.h>
-//#include "../cds/logger.h"
-//#include "../cds/list.h"
-
-//#include "../../version.h"
-#include "../../str.h"
-#include "../../mem/mem.h"
-#include "../../mem/shm_mem.h"
-#include "../../parser/msg_parser.h"
-#include "../../parser/parse_uri.h"
-#include "pidf_loc.h"
-
-
-#define LOST_CONTENT_TYPE		"Content-Type: application/lost+xml"
-#define LOST_CACHE_CONTROL		"Cache-Control: no-cache"
-//#define LOST_DEBUG			0
-#define LOST_ERR_NODE_NAME		"errors"
-#define LOST_REDIR_NODE_NAME		"redirect"
-#define LOST_WRNG_NODE_NAME		"warnings"
-#define LOST_MAPPING_NODE_NAME		"mapping"
-#define LOST_URI_NODE_NAME		"uri"
-#define LOST_FINDSRESP_NODE_NAME	"findServiceResponse"
-
-#define LOST_MSG_ATTR_NAME		"message"
-#define LOST_TGT_ATTR_NAME		"target"
-#define LOST_EXPIRES_ATTR_NAME		"expires"
-
-#define LOST_EXP_NO_CACHE		"NO-CACHE"
-#define LOST_EXP_NO_EXPIRATION		"NO-EXPIRATION"
-
-#define LOST_NS_HREF			"urn:ietf:params:xml:ns:lost1"
-#define LOST_XML_ENC			"UTF-8"
-#define LOST_FIND_SERVICE_CMD		"findService"
-#define LOST_LOCATION_NODE		"location"
-#define LOST_SERVICE_NODE		"service"
-
-#define LOST_ID_PROP			"id"
-#define LOST_PROFILE_PROP		"profile"
-
-int init_lost_lib();
-void end_lost_lib();
-
-CURL* lost_http_conn(char *url, int port, str* chunk);
-int create_lost_req(xmlNode* location, char * service, loc_fmt d_loc_fmt, str* lost_req);
-int send_POST_data(CURL* connhandle, str data);
-void lost_http_disconn(CURL* connhandle);
+int parse_geoloc(struct sip_msg * msg);
+void free_geoloc(struct geoloc_body **);
+void print_geoloc(struct geoloc_body *);
 
 #endif

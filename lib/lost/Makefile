@@ -1,12 +1,43 @@
-DEFS     += -fPIC
-INCLUDES += -I/usr/include/libxml2 -I/usr/local/include/libxml2 -I/usr/include/curl -I/usr/local/include -I../../ -I../cds/ -I../../mem/ 
-LIBS     += -L/usr/local/lib -L../cds -lxml2 -lcds -lcurl
+include ../../Makefile.defs
+auto_gen=
+NAME:=lost_client
+MAJOR_VER=0
+MINOR_VER=1
+BUGFIX_VER=0
+DEFS+=-DSER
 
-# name of result executable or library
-NAME = lost_client
+ifeq ($(CROSS_COMPILE),)
+XML2CFG=$(shell which xml2-config)
+endif
 
-# TYPE=lib => shared or static library, executable otherwise
-TYPE = lib
+ifneq ($(XML2CFG),)
+	libxml2_includes = $(shell $(XML2CFG) --cflags)
+	libxml2_libs = $(shell $(XML2CFG) --libs)
+else
+	libxml2_includes = -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include
+	libxml2_libs = -L$(LOCALBASE)/lib -lxml2
+endif
 
-include ../Makefile.defs
+ifeq ($(CROSS_COMPILE),)
+CURL_BUILDER=$(shell \
+    if pkg-config --exists libcurl; then \
+        echo 'pkg-config libcurl'; \
+    else \
+        which curl-config; \
+    fi)
+endif
+
+
+ifneq ($(CURL_BUILDER),)
+    CURLDEFS += $(shell $(CURL_BUILDER) --cflags)
+    CURLLIBS += $(shell $(CURL_BUILDER) --libs)
+else
+    CURLDEFS+=-I$(LOCALBASE)/include -I$(SYSBASE)/include
+    CURLLIBS+=-L$(LOCALBASE)/lib -L$(SYSBASE)/lib -lcurl -levent
+endif
+
+INCLUDES= -I$(CURDIR)/.. -I$(CURDIR)/../.. $(libxml2_includes) $(CURLDEFS)
+LIBS=$(libxml2_libs) $(CURLLIBS)
+
+include ../../Makefile.libs
 

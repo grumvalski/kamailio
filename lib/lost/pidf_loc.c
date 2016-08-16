@@ -43,6 +43,7 @@
  * 	email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
+#include "../../dprint.h"
 #include "client.h"
 #include "pidf_loc.h"
 #include "parsing.h"
@@ -56,7 +57,7 @@ static xmlNode* get_loc_info_kids(xmlNode* presence){
 
 	if(!presence){
 	
-		ERROR_LOG("null argument\n");
+		LM_ERR("null argument\n");
 		return res;
 	}
 	//search for the first device element
@@ -68,7 +69,7 @@ static xmlNode* get_loc_info_kids(xmlNode* presence){
 		if(child){
 			child = child_node_name_len(child, PIDF_STATUS, PIDF_STATUS_LEN);
 			if(!child){
-				ERROR_LOG("malformed request: tuple node has no status child\n");
+				LM_ERR("malformed request: tuple node has no status child\n");
 				return res;	
 			}
 		}
@@ -77,28 +78,28 @@ static xmlNode* get_loc_info_kids(xmlNode* presence){
 	if(!child){
 		child = child_node_name_len(presence, PIDF_PERS, PIDF_PERS_LEN);
 		if(!child){
-			ERROR_LOG("malformed request: no device, tuple, or person element\n");
+			LM_ERR("malformed request: no device, tuple, or person element\n");
 			return res;
 		}
 
 	}
 
-	DEBUG("found a location node: type %s\n", (char*)child->name);
+	LM_DBG("found a location node: type %s\n", (char*)child->name);
 
 	child = child_node_name_len(child, PIDF_GEOPRIV, PIDF_GEOPRIV_LEN);
 	if(!child){
-		ERROR_LOG("malformed request: no geopriv child element\n");
+		LM_ERR("malformed request: no geopriv child element\n");
 		return res;
 	}
 
 	res = child_node_name_len(child, PIDF_INFO, PIDF_INFO_LEN);
 	if(!res){
-		ERROR_LOG("malformed request: geopriv element has no location-info child element\n");
+		LM_ERR("malformed request: geopriv element has no location-info child element\n");
 		return res;
 	}
 	if(!res->children){
 	
-		ERROR_LOG("location-info node has no children\n");
+		LM_ERR("location-info node has no children\n");
 	}
 
 	return res;
@@ -111,14 +112,14 @@ xmlNode * is_geo_coord_fmt(xmlNode * locNode, loc_fmt * crt_loc_fmt){
 	
 	node = locNode;
 	char * name = (char*)node->name;
-	DEBUG("checking if %s node has geo_coord format, like in RFC 4119\n", name);
+	LM_DBG("checking if %s node has geo_coord format, like in RFC 4119\n", name);
 
 	if(!(name_compar(name,  PIDF_POINT_SHAPE, PIDF_POINT_SHAPE_LEN))){
-		ERROR_LOG("the location node is not a RFC 4119 geodetic location info\n");
+		LM_ERR("the location node is not a RFC 4119 geodetic location info\n");
 	        *crt_loc_fmt = ERR_LOC;
 		return NULL;
 	}
-	DEBUG("found node Point, geo coord format present\n");
+	LM_DBG("found node Point, geo coord format present\n");
 	*crt_loc_fmt = GEO_COORD_LOC;
 	return node;
 }
@@ -129,7 +130,7 @@ xmlNode * is_geo_shape_fmt(xmlNode* node, loc_fmt * crt_loc_fmt){
 	char* name;
 
 	name = (char*)node->name;
-	DEBUG("checking if %s node has geo_shape format\n", name);
+	LM_DBG("checking if %s node has geo_shape format\n", name);
 
 	if(name_compar(name, PIDF_POINT_SHAPE, PIDF_POINT_SHAPE_LEN) || 
 			name_compar(name, PIDF_POLYGON_SHAPE, PIDF_POINT_SHAPE_LEN) ||
@@ -144,7 +145,7 @@ xmlNode * is_geo_shape_fmt(xmlNode* node, loc_fmt * crt_loc_fmt){
 		
 		*crt_loc_fmt = GEO_NEW_SHAPE_LOC;
 	}else{
-		ERROR_LOG("no valid geo shape found\n");
+		LM_ERR("no valid geo shape found\n");
 		*crt_loc_fmt = ERR_LOC;
 		node = NULL;
 	}	
@@ -158,15 +159,15 @@ xmlNode * is_RFC4119_civic_fmt(xmlNode * locNode, loc_fmt * crt_loc_fmt){
 	char * cur_name;
 	cur_name = (char*)locNode->name;
 	
-	DEBUG("checking if node %s has RFC 4119 civic format\n", cur_name);
+	LM_DBG("checking if node %s has RFC 4119 civic format\n", cur_name);
 
 	if (name_compar(cur_name, PIDF_CIV_LOC, PIDF_CIV_LOC_LEN)){
-		DEBUG("found a %.*s child, has RFC 4119 civic format\n",
+		LM_DBG("found a %.*s child, has RFC 4119 civic format\n",
 				PIDF_CIV_LOC_LEN, PIDF_CIV_LOC);
 		*crt_loc_fmt = OLD_CIV_LOC;
 		node = locNode;
 	}else{
-		ERROR_LOG("did not find a %.*s child, no civic fromat\n",
+		LM_ERR("did not find a %.*s child, no civic fromat\n",
 				PIDF_CIV_LOC_LEN, PIDF_CIV_LOC);
 	       	*crt_loc_fmt = ERR_LOC;
 	       	node = NULL;
@@ -186,15 +187,15 @@ xmlNode* is_new_civic_fmt(xmlNode * locNode, loc_fmt * crt_loc_fmt){
 	char * cur_name;
 	cur_name = (char*)locNode->name;
 	
-	DEBUG("checking if node %s has new civic format\n", cur_name);
+	LM_DBG("checking if node %s has new civic format\n", cur_name);
 	
 	if (name_compar(cur_name, PIDF_CIV_LOC, PIDF_CIV_LOC_LEN)){
-		DEBUG("found a %.*s node, has new civic format\n",
+		LM_DBG("found a %.*s node, has new civic format\n",
 				PIDF_CIV_LOC_LEN, PIDF_CIV_LOC);
 		*crt_loc_fmt = NEW_CIV_LOC;
 		node = locNode;
 	}else{
-		ERROR_LOG("did not find a %.*s node, no civic fromat\n",
+		LM_ERR("did not find a %.*s node, no civic fromat\n",
 				PIDF_CIV_LOC_LEN, PIDF_CIV_LOC);
 	       	*crt_loc_fmt = ERR_LOC;
 	       	node = NULL;
@@ -218,7 +219,7 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 	res = NULL;
 
 	if(!presence){
-		ERROR_LOG("has_loc_info: NULL presence object!!!\n");
+		LM_ERR("has_loc_info: NULL presence object!!!\n");
 		*code = 3;
 		goto err;
 	}
@@ -232,13 +233,13 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 	ns = get_ns_prfx_len(presence, PIDF_GEO_NS_PRFX, PIDF_GEO_NS_PRFX_LEN);
 	if(!ns){
 	
-		DEBUG("has_loc_info:the application/pidf+xml has no xmlns:%.*s namespace in the presence node\n",
+		LM_DBG("has_loc_info:the application/pidf+xml has no xmlns:%.*s namespace in the presence node\n",
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX);
 	
 		ns = get_ns_prfx_len(locNode, PIDF_GEO_NS_PRFX, PIDF_GEO_NS_PRFX_LEN);
 		if(!ns){
 	
-			DEBUG("has_loc_info:the application/pidf+xml location-info node has no xmlns:%.*s namespace, ignoring it\n",
+			LM_DBG("has_loc_info:the application/pidf+xml location-info node has no xmlns:%.*s namespace, ignoring it\n",
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX);
 			*code = 2;
 			goto err;
@@ -247,7 +248,7 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 	
 	if(ns->href == NULL){
 
-		ERROR_LOG("Malformed PIDF_LO : location-info node with no value for the namespace xmlns:%.*s\n",
+		LM_ERR("Malformed PIDF_LO : location-info node with no value for the namespace xmlns:%.*s\n",
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX);
 		*code = 1;
 		goto err;
@@ -255,7 +256,7 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 	
 	content = (char*)ns->href;
 	if(!(name_compar(content, PIDF_GEO_NS_HREF, PIDF_GEO_NS_HREF_LEN))){
-		ERROR_LOG("namespace xmlns:%.*s of the location-info node has not the expected value %.*s\n",
+		LM_ERR("namespace xmlns:%.*s of the location-info node has not the expected value %.*s\n",
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX,
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_HREF);
 		*code = 2;
@@ -301,7 +302,7 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 				return res;
 		}
 
-		ERROR_LOG("no valid xml namespace with the valid href values  %.*s, %.*s, %.*s or %.*s, or the right format\n",
+		LM_ERR("no valid xml namespace with the valid href values  %.*s, %.*s, %.*s or %.*s, or the right format\n",
 				PIDF_NEW_CIV_NS_HREF_LEN, PIDF_NEW_CIV_NS_HREF,
 				PIDF_GEO_SHAPE_NS_HREF_LEN, PIDF_GEO_SHAPE_NS_HREF,
 				PIDF_GEO_COORD_NS_HREF_LEN, PIDF_GEO_COORD_NS_HREF,

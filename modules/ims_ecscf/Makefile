@@ -27,5 +27,6 @@ DEFS += -DOPENSER_MOD_INTERFACE
 SERLIBPATH=../../lib
 SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1 $(SERLIBPATH)/kcore/kcore
 SER_LIBS+=$(SERLIBPATH)/ims/kamailio_ims
+SER_LIBS+=$(SERLIBPATH)/lost/lost_client
 
 include ../../Makefile.modules

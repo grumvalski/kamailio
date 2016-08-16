@@ -43,6 +43,7 @@
  * 	email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
+#include "../../dprint.h"
 #include "parsing.h"
 #include "client.h"
 
@@ -57,23 +58,23 @@ void print_element_names(xmlNode * a_node){
 
     for (cur_node = a_node; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE) {
-            DEBUG_LOG("node type: Element, name: %s\n", cur_node->name);
+            LM_DBG("node type: Element, name: %s\n", cur_node->name);
 	    
 //	    if((content = xmlNodeGetContent((xmlNodePtr)cur_node))){
 //		    if(strlen((char*)content))
-//			    DEBUG_LOG("node content %s\n", content);
+//			    LM_DBG("node content %s\n", content);
 //		    xmlFree(content);
 //	   }
         }
 
 	for(attr = cur_node->properties; attr != NULL; attr = attr->next){
-		DEBUG_LOG("               attribute name [%s] : value [%s]\n", (char*)attr->name, 
+		LM_DBG("               attribute name [%s] : value [%s]\n", (char*)attr->name, 
 				(attr->children == NULL)? "":(char*)attr->children->content);
 	}
 
 	for(namesp = cur_node->ns; namesp != NULL; namesp = namesp->next){
 	
-		DEBUG_LOG("               namespace prefix %s href %s\n",
+		LM_DBG("               namespace prefix %s href %s\n",
 				namesp->prefix, namesp->href);
 	}
 
@@ -145,7 +146,7 @@ void print_attr(xmlNode * node, char * attr_name){
 	xmlAttr * attr;
 	attr = get_attr(node, attr_name);
 	if(attr)
-		DEBUG_LOG("attribute [%s] : value [%s]\n", (char*)attr->name, 
+		LM_DBG("attribute [%s] : value [%s]\n", (char*)attr->name, 
 			(attr->children == NULL)? "":(char*)attr->children->content);
 }
 
@@ -195,9 +196,9 @@ xmlNs* get_ns_href_len(xmlNode* node, char* href, int href_len){
 	for(ns=node->ns; ns ; ns= ns->next){
 	
 		name = (char*)ns->href;
-		//DEBUG_LOG("compare ns %s with %.*s", name, href_len, href);
+		//LM_DBG("compare ns %s with %.*s", name, href_len, href);
 		if(name && name_compar(name, href, href_len)){
-			DEBUG_LOG("found namespace with href %.*s\n",
+			LM_DBG("found namespace with href %.*s\n",
 					href_len, href);
 			return ns;
 		}
@@ -228,7 +229,7 @@ xmlNode * xml_parse_string(str response){
 			response.s, 4, NULL);
 	
 	if (ctxt == NULL) {
-        	ERROR_LOG("Failed to create parser context !\n");
+        	LM_ERR("Failed to create parser context !\n");
 		return NULL;
     	}
 
@@ -245,7 +246,7 @@ xmlNode * xml_parse_string(str response){
     	xmlFreeParserCtxt(ctxt);
 
     	if (!res) {
-        	ERROR_LOG("Failed to parse %.*s\n", 
+        	LM_ERR("Failed to parse %.*s\n", 
 				response.len, response.s);
 		return NULL;
     	}
@@ -274,33 +275,33 @@ int get_time(char * expires_str, expire_type * exp_type, time_t * exp_timestamp)
 		*exp_type = EXP_NO_CACHE;
 	}else{
 		if(expires_str[0] == '-'){
-			ERROR_LOG("year begins with minus...too long ago\n");
+			LM_ERR("year begins with minus...too long ago\n");
 			return -1;
 		}
 		
 		if(sscanf(expires_str, "%4d-%2d-%2dT%2d:%2d:%2d", &year, &month, &day, &hour, &min, &sec) == EOF){
-			ERROR_LOG("Error at sscanf: %s\n", strerror(errno));
+			LM_ERR("Error at sscanf: %s\n", strerror(errno));
 			return -1;
 		}
 
 		if(year < 1900 ){
-			ERROR_LOG("Invalid date: year [%i] must be >= 1900 \n", year);
+			LM_ERR("Invalid date: year [%i] must be >= 1900 \n", year);
 			return -1;
 		}
 		if(month <1 || month > 12){
-			ERROR_LOG("Invalid date: month [%i] must be >= 1 and <=12 \n", month);
+			LM_ERR("Invalid date: month [%i] must be >= 1 and <=12 \n", month);
 			return -1;
 		}
 		if(day < 1 || day> 31){
-			ERROR_LOG("Invalid date: day [%i] must be >= 1 and <=31 \n", day);
+			LM_ERR("Invalid date: day [%i] must be >= 1 and <=31 \n", day);
 			return -1;	
 		}
 		if(hour <0 || hour> 23){
-			ERROR_LOG("Invalid date: hour [%i] must be >= 0 and <=23 \n", hour);
+			LM_ERR("Invalid date: hour [%i] must be >= 0 and <=23 \n", hour);
 			return -1;	
 		}
 		if(min<0 || min > 59 || sec < 0 || sec>60){
-			ERROR_LOG("Invalid date: min [%i] must be >=0 and <=59 and sec [%i] >=0 and <=60\n", min, sec);
+			LM_ERR("Invalid date: min [%i] must be >=0 and <=59 and sec [%i] >=0 and <=60\n", min, sec);
 			return -1;
 		}
 
@@ -317,11 +318,11 @@ int get_time(char * expires_str, expire_type * exp_type, time_t * exp_timestamp)
   		/* call mktime: timeinfo->tm_wday will be set */
   		*exp_timestamp = mktime(timeinfo);
 		if(*exp_timestamp < 0){
-			ERROR_LOG("Invalid date: %s\n", strerror(errno));
+			LM_ERR("Invalid date: %s\n", strerror(errno));
 			return -1;
 		}
 
-		DEBUG_LOG("Date time specified: year %i month %i day %i hour %i min %i sec %i\n",
+		LM_DBG("Date time specified: year %i month %i day %i hour %i min %i sec %i\n",
 				year, month, day, hour, min, sec);
 		*exp_type = EXP_TIME;
 	}

@@ -166,7 +166,38 @@ e_dialog* new_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 e_dialog* add_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 int is_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 e_dialog* is_e_dialog_dir(struct sip_msg *, str call_id,enum e_dialog_direction dir);
-//e_dialog* get_e_dialog(str call_id,str aor);
+
+int e_dialogs_hash_size;
+/**
+ * Computes the hash for a string.
+ * @param call_id - the string to compute for
+ * @returns the hash % ecscf_dialogs_hash_size
+ */
+static inline unsigned int get_e_dialog_hash(str call_id)
+{
+	if (call_id.len==0) return 0;
+#define h_inc h+=v^(v>>3)
+	char* p;
+	register unsigned v;
+	register unsigned h;
+  	
+	h=0;
+	for (p=call_id.s; p<=(call_id.s+call_id.len-4); p+=4){
+		v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
+		h_inc;
+	}
+	v=0;
+	for (;p<(call_id.s+call_id.len); p++) {
+		v<<=8;
+		v+=*p;
+	}
+	h_inc;
+	
+	h=((h)+(h>>11))+((h>>13)+(h>>23));
+	return (h)%e_dialogs_hash_size;
+#undef h_inc 
+}
+
 e_dialog* get_e_dialog_dir(str call_id,enum e_dialog_direction dir);
 e_dialog* get_e_dialog_dir_nolock(str call_id,enum e_dialog_direction dir);
 int terminate_e_dialog(e_dialog *d);
