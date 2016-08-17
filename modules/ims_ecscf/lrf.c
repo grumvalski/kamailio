@@ -109,7 +109,7 @@ int E_del_ESQK_info(struct sip_msg * inv_repl, char* str1, char* str2){
 	struct hdr_field* esqk_header;
 
 	if((esqk_header = cscf_get_header(inv_repl, esqk_hdr_name))){
-		LOG(L_DBG, "DBG:"M_NAME":E_del_ESQK_info: removing the header ESQK with the value %.*s\n",
+		LM_DBG("removing the header ESQK with the value %.*s\n",
 				esqk_header->body.len, esqk_header->body.s);
 		if(cscf_del_header(inv_repl, esqk_header)==0)
 			return CSCF_RETURN_FALSE;
@@ -125,11 +125,11 @@ int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_r
 	str pidf_body = {NULL, 0};
 	int ret;
 
-	LOG(L_DBG, "DBG:"M_NAME":E_add_loc_info: trying to add the location information from the LRF, if present\n");
+	LM_DBG("trying to add the location information from the LRF, if present\n");
 	
 	ret = get_pidf_lo_body(opt_repl, &pidf_body);
 	if(ret == -1){
-		LOG(L_ERR, "ERR:"M_NAME":E_add_loc_info:could not get the pidf+xml body from the LRF response\n");
+		LM_ERR("could not get the pidf+xml body from the LRF response\n");
 		return CSCF_RETURN_FALSE;
 	}else if (ret == 1)
 		return CSCF_RETURN_TRUE;
@@ -146,7 +146,7 @@ int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_r
 int E_set_psap(e_dialog * d, str psap_uri){
 
 	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_psap: empty PSAP-URI header in the OPTIONS reply \n");
+		LM_ERR("empty PSAP-URI header in the OPTIONS reply \n");
 		goto error;
 	}
 
@@ -166,19 +166,19 @@ int E_set_em_info(e_dialog * d, struct sip_msg * opt_repl){
 		goto psap_set;
 
 	if(!(esqk_header = cscf_get_header(opt_repl, esqk_hdr_name))){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: could not found the header %.*s in the OPTIONS reply\n", 
+		LM_ERR("could not found the header %.*s in the OPTIONS reply\n", 
 				esqk_hdr_name.len, esqk_hdr_name.s);
 		goto error;
 	}
 	if(!esqk_header->body.s || !esqk_header->body.len){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: empty Esqk header\n");
+		LM_ERR("empty Esqk header\n");
 		goto error;
 	}
 	STR_SHM_DUP(d->esqk, esqk_header->body, "E_set_em_info");
 
 psap_set:	
 	if(!(psap_uri_hdr = cscf_get_header(opt_repl, psap_uri_hdr_name))){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: could not found the header %.*s in the OPTIONS reply\n", 
+		LM_ERR("could not found the header %.*s in the OPTIONS reply\n", 
 				psap_uri_hdr_name.len, psap_uri_hdr_name.s);
 		goto error;
 	}
@@ -187,7 +187,7 @@ psap_set:
 		goto error;
 
 
-	LOG(L_DBG, "DBG:"M_NAME":E_set_em_info: psap_uri is %.*s and esqk value is %.*s\n",
+	LM_DBG("psap_uri is %.*s and esqk value is %.*s\n",
 			d->psap_uri.len, d->psap_uri.s, d->esqk.len, d->esqk.s);
 
 	return CSCF_RETURN_TRUE;
@@ -220,7 +220,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		return 0;
 
 	if(!inv_trans->uas.request){
-		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: the INVITE message is not set in the INVITE trans\n");
+		LM_ERR("INVITE message is not set in the INVITE trans\n");
 		goto error;
 	}
 	
@@ -230,43 +230,43 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 	if (!call_id.len)
 		goto error;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_process_options_repl: Call-ID <%.*s>\n",call_id.len,call_id.s);
+	LM_DBG("Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(inv_trans->uas.request, call_id,dir);
 	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:message did not create no dialog\n");
+		LM_ERR("message did not create a dialog\n");
 		goto error;
 	}
 	
 	if(d->is_cancelled){
-		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: the emergency call was cancelled, no further processing\n");
+		LM_DBG("the emergency call was cancelled, no further processing\n");
 		goto end;
 	}
 
 	if(code >= 300){
 		//send error response to INVITE and update the dialog
-		LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
+		LM_DBG("received an error response %i\n", code);
 
 		if(code != 408 && use_default_psap){
 			if(E_set_psap(d, default_psap_uri_str) != CSCF_RETURN_TRUE)
 				goto error;
 			
-			LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: trying to use the defautl PSAP\n");
+			LM_DBG("trying to use the defautl PSAP\n");
 			goto fwd_invite;
 		}
 
 		if(tmb.t_reply(inv_trans->uas.request, 404, NO_PSAP)<0){
-			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not reply to the INVITE request\n");
+			LM_ERR("Could not reply to the INVITE request\n");
 			goto error;
 		}
-		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: sent a 404 no available PSAP error response\n");
+		LM_DBG("sent a 404 no available PSAP error response\n");
 
 		d->state = DLG_STATE_TERMINATED;
 		d->expires = 0;
 		d->lr_session_expires = 0;
 
 		d_unlock(d->hash);				
-		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: setting the dialog a 0 expire interval\n");
+		LM_DBG("setting the dialog t0 expire interval\n");
 		print_e_dialogs(L_INFO);
 
 	}else{
@@ -287,12 +287,12 @@ fwd_invite:
 			goto error;
 
 		if(tmb.t_relay(inv_trans->uas.request, 0, 0) != 1){
-			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not relay the INVITE request\n");
+			LM_ERR("Could not relay the INVITE request\n");
 			goto error;
 		}
 		d->forwarded  = 1;
 		cscf_del_nonshm_lumps(inv_trans->uas.request);
-		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
+		LM_ERR("forward the INVITE request\n");
 	}
 end:	
 	ret = 0;	
@@ -369,23 +369,23 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 	str content_len_str;
 	uac_req_t uac_r;
 	
-	LOG(L_DBG,"DBG:"M_NAME":send_options_req: OPTIONS to <%.*s>, service %.*s\n",
+	LM_DBG("sending OPTIONS to <%.*s>, service %.*s\n",
 		req_uri.len, req_uri.s, service.len, service.s);
 
 	if(!inv_tr){
-		LOG(L_ERR, "ERR:"M_NAME":send_options_req:invalid initial trans argument\n");
+		LM_ERR("invalid initial trans argument\n");
 		return -1;
 	}
 
 	if(!req_uri.len || req_uri.s[0] == '\0'){
-		LOG(L_ERR, "ERR:"M_NAME":send_options_req:invalid req_uri argument\n");
+		LM_ERR("invalid req_uri argument\n");
 		return -1;
 	}
 
 	content_len = location.len;
 	content_len_str.s = int2str((unsigned int) content_len, &content_len_str.len);
 	if(content_len_str.len <0 || content_len_str.len > (INT2STR_MAX_LEN)){
-		LOG(L_ERR, "ERR:"M_NAME":send_options_req: could not encode the content length, %i\n", content_len);
+		LM_ERR("could not encode the content length, %i\n", content_len);
 		return -1;
 	}
 
@@ -404,7 +404,7 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	h.s = pkg_malloc(h.len);
 	if (!h.s){
-		LOG(L_ERR,"ERR:"M_NAME":send_options_req: Error allocating %d bytes\n",h.len);
+		LM_ERR("Error allocating %d bytes\n",h.len);
 		h.len = 0;
 		return 0;
 	}
@@ -448,12 +448,12 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 		STR_APPEND(h,content_len_hdr_e);
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":send_options_req: headers are: \n%.*s, cb_par:%p index: %u label: %u\n", 
+	LM_DBG("headers are: \n%.*s, cb_par:%p index: %u label: %u\n", 
 			h.len, h.s, cb_par, cb_par->hash_index, cb_par->label);
 
 	set_uac_req(&uac_r, &options_method, &h, &location, 0, TMCB_LOCAL_COMPLETED, options_resp_cb, (void*)cb_par);
 	if (tmb.t_request(&uac_r, &req_uri, &lrf_sip_uri_str, &ecscf_name_str, &lrf_sip_uri_str) < 0) {
-                LOG(L_ERR,"ERR:"M_NAME":send_options_req: Error sending in transaction\n");
+                LM_ERR("Error sending in transaction\n");
                 goto error;
     }
 	
@@ -484,26 +484,26 @@ int E_query_LRF(struct sip_msg* msg, char* direction, char* str2){
 	
 	enum e_dialog_direction dir = get_dialog_direction(direction);
 	if(dir == DLG_MOBILE_UNKNOWN){
-		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF: error invalid argument str1\n");
+		LM_ERR("error invalid argument str1\n");
 		return CSCF_RETURN_FALSE;
 	}
 		
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len){
-		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Call-ID header\n");
+		LM_ERR("no or invalid Call-ID header\n");
 		return CSCF_RETURN_FALSE;
 	}
 	
-	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
+	LM_DBG("Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	if(cscf_get_from_uri(msg, &from_uri)==0){
-		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid From header\n");
+		LM_ERR("no or invalid From header\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:message did not create no dialog\n");
+		LM_ERR("message did not create no dialog\n");
 		return CSCF_RETURN_ERROR;
 	}
 
@@ -514,32 +514,32 @@ int E_query_LRF(struct sip_msg* msg, char* direction, char* str2){
 
 		req_uri = cscf_get_contact(msg);
 		if(req_uri.s == NULL || req_uri.len == 0){
-			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+			LM_ERR("no or invalid Contact header\n");
 			return CSCF_RETURN_FALSE;
 		}
 
 	}else if(user_id==SIP_URI_ID){
 
 		if(cscf_get_from_uri(msg, &req_uri)!=1){
-			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid From header\n");
+			LM_ERR("no or invalid From header\n");
 			return CSCF_RETURN_FALSE;
 		}
 		
 		if(req_uri.s == NULL || req_uri.len == 0){
-			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+			LM_ERR("no or invalid Contact header\n");
 			return CSCF_RETURN_FALSE;
 		}
 	}else{
-		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: invalid user id type\n");
+		LM_ERR("invalid user id type\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	if(d->location_str.len && d->location_str.s){
-		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message contained supported location information\n");
+		LM_DBG("the message contained supported location information\n");
 		location_str.s = d->location_str.s;
 		location_str.len = d->location_str.len;
 	}else{
-		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message did not contain supported location information\n");
+		LM_DBG("the message did not contain supported location information\n");
 	}
 
 	t = tmb.t_gett();
@@ -589,7 +589,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	enum e_dialog_direction dir = get_dialog_direction(str1);
 	if(dir == DLG_MOBILE_UNKNOWN){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location: error invalid argument str1\n");
+		LM_ERR("error invalid argument %s\n", str1);
 		return CSCF_RETURN_ERROR;
 	}
 		
@@ -597,46 +597,46 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	if (!call_id.len)
 		return CSCF_RETURN_ERROR;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_get_location: Call-ID <%.*s>\n",call_id.len,call_id.s);
+	LM_DBG("Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:message did not create no dialog\n");
+		LM_ERR("message did not create a dialog\n");
 		return CSCF_RETURN_ERROR;
 	}
 
 	ret = parse_geoloc(msg);
 	switch(ret){
 		case -1:
-			LOG(L_ERR, "ERR:"M_NAME":E_get_location: error while parsing the Geolocation header\n");
+			LM_ERR("error while parsing the Geolocation header\n");
 			goto error_loc;
 		case 0: break;
 		case 1: 
-			LOG(L_ERR, "ERR:"M_NAME":E_get_location: no Geolocation header found => emergency call without location information\n");
+			LM_ERR("no Geolocation header found => emergency call without location information\n");
 			goto no_geoloc;
 		default:  	
-			LOG(L_ERR, "ERR:"M_NAME":E_get_location: unhandled return value\n");
+			LM_ERR("unhandled return value %d\n", ret);
 			goto error_loc;
 	}
 
 	
 	print_geoloc((struct geoloc_body*)msg->geolocation->parsed);
 	if(!((struct geoloc_body*)msg->geolocation)->retrans_par){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:the location does not support routing based on location\n");
+		LM_ERR("the location does not support routing based on location\n");
 		goto error_loc;
 	}
 
 	for(value = ((struct geoloc_body*)msg->geolocation->parsed)->loc_list;value!=NULL; value=value->next){
 	
 		if(value->locURI.type != CID_T){
-			LOG(L_ERR, "ERR:"M_NAME":E_get_location: geolocation uri type unsupported\n");
+			LM_ERR("geolocation uri type unsupported\n");
 			goto error_loc;
 		}
 	}
 
 	
 	if(get_pidf_lo_body(msg, &pidf_body)){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not get the pidf+xml body, but with the Geolocation header set\n");
+		LM_ERR("could not get the pidf+xml body, but with the Geolocation header set\n");
 		goto error_loc;
 	}
 	
@@ -644,7 +644,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	//		pidf_body.len, pidf_body.s);
 
 	if(!(presence = xml_parse_string(pidf_body))){
-		LOG(L_ERR, "ERR:"M_NAME": E_get_location:invalid xml content\n");
+		LM_ERR("invalid xml content\n");
 		goto error_loc;
 	}
 
@@ -652,7 +652,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	if(!(loc = has_loc_info(&ret, presence, &crt_loc_fmt))){
 	
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not find a valid location element, but with the Geolocation header set\n");
+		LM_ERR("could not find a valid location element, but with the Geolocation header set\n");
 		xmlFreeDoc(presence->doc);
 		goto error_loc;
 	}
@@ -660,14 +660,14 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	if((crt_loc_fmt == GEO_SHAPE_LOC) || (crt_loc_fmt == NEW_CIV_LOC) ||
 			(crt_loc_fmt == OLD_CIV_LOC) || (crt_loc_fmt == GEO_COORD_LOC)){
 	
-		LOG(L_DBG, "DBG:"M_NAME":E_get_location:LoST supported format, setting the location\n");
+		LM_DBG("LoST supported format, setting the location\n");
 
 	}else if(crt_loc_fmt == ERR_LOC){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:error while parsing the location information\n");
+		LM_ERR("error while parsing the location information\n");
 		xmlFreeDoc(presence->doc);
 		goto error_loc;
 	}else{
-		LOG(L_DBG, "DBG:"M_NAME":E_get_location:no LoST supported format\n");
+		LM_DBG("no LoST supported format\n");
 		xmlFreeDoc(presence->doc);
 		goto error_loc;
 	}

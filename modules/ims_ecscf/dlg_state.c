@@ -124,7 +124,7 @@ int e_dialogs_init(int hash_size)
 	for(i=0;i<e_dialogs_hash_size;i++){
 		e_dialogs[i].lock = lock_alloc();
 		if (!e_dialogs[i].lock){
-			LOG(L_ERR,"ERR:"M_NAME":d_hash_table_init(): Error creating lock\n");
+			LM_ERR("Error creating lock\n");
 			return 0;
 		}
 		e_dialogs[i].lock = lock_init(e_dialogs[i].lock);
@@ -219,7 +219,7 @@ static inline int e_dialog_count_increment ()
     	e_dialog_count_unlock();
     	return 0;
 	}
-	LOG(L_DBG,"DBG:"M_NAME":e_dialog_count_increment(): E-CSCF Dialog counter value is %d\n", *ecscf_dialog_count);
+	LM_DBG("E-CSCF Dialog counter value is %d\n", *ecscf_dialog_count);
 }
 
 /**
@@ -231,7 +231,7 @@ static inline void e_dialog_count_decrement()
     e_dialog_count_lock();
     (*ecscf_dialog_count)--;
     e_dialog_count_unlock();
-	LOG(L_DBG,"DBG:"M_NAME":e_dialog_count_decrement(): E-CSCF Dialog counter value is %d\n", *ecscf_dialog_count);    
+	LM_DBG("E-CSCF Dialog counter value is %d\n", *ecscf_dialog_count);    
 }
 
 
@@ -250,7 +250,7 @@ e_dialog* new_e_dialog(str call_id,str aor, enum e_dialog_direction dir)
 	if (!e_dialog_count_increment()) return 0;
 	d = shm_malloc(sizeof(e_dialog));
 	if (!d) {
-		LOG(L_ERR,"ERR:"M_NAME":new_e_dialog(): Unable to alloc %d bytes\n",
+		LM_ERR("Unable to alloc %d bytes\n",
 			(int)sizeof(e_dialog));
 		goto error;
 	}
@@ -344,7 +344,7 @@ int is_dialog_to_callee(int sip_msg_type, e_dialog* d, str from_uri, str to_uri)
 		psap_str.len = d->psap_uri.len;
 	}
        
-	LOG(L_DBG,"DBG:"M_NAME":dialog_to_callee: comparing %.*s to %.*s and %.*s to %.*s\n",
+	LM_DBG("dialog_to_callee: comparing %.*s to %.*s and %.*s to %.*s\n",
 			//to_uri.len, to_uri.s, psap_str.len, psap_str.s,
 			to_uri.len, to_uri.s, psap_str.len, psap_str.s,
 			from_uri.len, from_uri.s, d->dialog_c->loc_uri.len-2, d->dialog_c->loc_uri.s+1);
@@ -353,7 +353,7 @@ int is_dialog_to_callee(int sip_msg_type, e_dialog* d, str from_uri, str to_uri)
 			from_uri.len == (d->dialog_c->loc_uri.len-2) &&
 			strncasecmp(to_uri.s, psap_str.s, to_uri.len)==0 &&
 			strncasecmp(from_uri.s, d->dialog_c->loc_uri.s+1, from_uri.len)==0){
-		LOG(L_DBG, "DBG:"M_NAME":dialog_to_callee: matched\n");
+		LM_DBG("dialog_to_callee: matched\n");
 		return 1;
 	}
 	return 0;
@@ -377,7 +377,7 @@ int is_dialog_to_caller(int sip_msg_type, e_dialog* d, str from_uri, str to_uri)
 		psap_str.len = d->psap_uri.len;
 	}
 
-	LOG(L_DBG,"DBG:"M_NAME":dialog_to_caller: comparing %.*s to %.*s and %.*s to %.*s\n",
+	LM_DBG("comparing %.*s to %.*s and %.*s to %.*s\n",
 			from_uri.len, from_uri.s, psap_str.len, psap_str.s,
 			to_uri.len, to_uri.s, d->dialog_c->loc_uri.len-2, d->dialog_c->loc_uri.s+1);
 
@@ -385,7 +385,7 @@ int is_dialog_to_caller(int sip_msg_type, e_dialog* d, str from_uri, str to_uri)
 			to_uri.len == (d->dialog_c->loc_uri.len-2) &&
 			strncasecmp(from_uri.s, psap_str.s, from_uri.len)==0 &&
 			strncasecmp(to_uri.s, d->dialog_c->loc_uri.s+1, to_uri.len)==0){
-		LOG(L_DBG, "DBG:"M_NAME":dialog_to_caller: matched\n");
+		LM_DBG("matched\n");
 		return 1;
 	}
 	return 0;
@@ -407,12 +407,12 @@ e_dialog * is_e_dialog_dir(struct sip_msg * msg, str call_id,enum e_dialog_direc
 	int sip_msg_type = msg->first_line.type;
 
 	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0)){
-		LOG(L_ERR, "ERR:"M_NAME":is_e_dialog_dir: failed to parse the From header\n");
+		LM_ERR("failed to parse the From header\n");
 		return d;
 	}
 
 	if((!msg->to || !msg->to->parsed) && ( parse_headers(msg,HDR_TO_F,0)==-1 || !msg->to || !msg->to->parsed)) {
-		LOG(L_ERR, "ERR:"M_NAME":is_e_dialog_dir: failed to parse the To header\n");
+		LM_ERR("failed to parse the To header\n");
 		return d;
 	}
 
@@ -553,7 +553,7 @@ int terminate_e_dialog(e_dialog *d)
 			return 1;
 			break;
 		default:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_e_dialog(): Not implemented yet for method[%d]!\n",d->method);
+			LM_ERR("Not implemented yet for method[%d]!\n",d->method);
 			return 0;
 	}
 }
@@ -565,7 +565,7 @@ int terminate_e_dialog(e_dialog *d)
  */
 void del_e_dialog(e_dialog *d)
 {
-	LOG(L_INFO,"DBG:"M_NAME":del_e_dialog(): Deleting dialog <%.*s> DIR[%d]\n",d->call_id.len,d->call_id.s,d->direction);
+	LM_DBG("deleting dialog <%.*s> DIR[%d]\n",d->call_id.len,d->call_id.s,d->direction);
 	if (d->prev) d->prev->next = d->next;
 	else e_dialogs[d->hash].head = d->next;
 	if (d->next) d->next->prev = d->prev;
@@ -654,7 +654,7 @@ enum e_dialog_direction get_dialog_direction(char *direction)
 		case '1':
 			return DLG_MOBILE_TERMINATING;
 		default:
-			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
+			LM_CRIT("Unknown direction %s",direction);
 			return DLG_MOBILE_UNKNOWN;
 	}
 }
@@ -681,7 +681,7 @@ static inline int find_dialog_aor(struct sip_msg *msg,enum e_dialog_direction d,
 			return 1;
 			break;
 		default:
-			LOG(L_CRIT,"ERR:"M_NAME":find_dialog_aor(): Unknown direction %d",d);
+			LM_CRIT("Unknown direction %d",d);
 			return 0;
 	}
 	return 1;
@@ -695,9 +695,9 @@ static inline enum e_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 	str r;	
 	r = cscf_get_first_route(msg,0,0);
 	
-	LOG(L_DBG,"DBG:"M_NAME":find_dialog_route_dir(): Route <%.*s>\n",r.len,r.s);
+	LM_DBG("Route <%.*s>\n",r.len,r.s);
 
-	LOG(L_DBG, "DBG:"M_NAME":find_dialog_route_dir(): rr_mo %.*s rr_mt %.*s: \n",
+	LM_DBG("rr_mo %.*s rr_mt %.*s: \n",
 			ecscf_record_route_mo_uri.len,ecscf_record_route_mo_uri.s,
 			ecscf_record_route_mt_uri.len,ecscf_record_route_mt_uri.s);
 	
@@ -705,12 +705,12 @@ static inline enum e_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 	
 	if (r.len >= ecscf_record_route_mo_uri.len &&
 		strncasecmp(r.s,ecscf_record_route_mo_uri.s,ecscf_record_route_mo_uri.len)==0){
-		LOG(L_DBG, "DBG:"M_NAME": mobile originating\n");
+		LM_DBG("mobile originating\n");
 		return DLG_MOBILE_ORIGINATING;
 	}
 	if (r.len >= ecscf_record_route_mt_uri.len &&
 		strncasecmp(r.s,ecscf_record_route_mt_uri.s,ecscf_record_route_mt_uri.len)==0){
-		LOG(L_DBG, "DBG:"M_NAME": mobile terminating\n");
+		LM_DBG("mobile terminating\n");
 		return DLG_MOBILE_TERMINATING;
 	}
 	return DLG_MOBILE_UNKNOWN;
@@ -729,7 +729,7 @@ int E_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2)
 {
 	struct to_body * from_body;
 
-	LOG(L_INFO,"DBG:"M_NAME":E_is_anonymous_user: Check if anonymous identity used\n");
+	LM_DBG("check if anonymous identity used\n");
 
 	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0))
 		return CSCF_RETURN_BREAK;
@@ -738,7 +738,7 @@ int E_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2)
 	from_body = (struct to_body*)msg->from->parsed;
 	if((from_body->display.len == anonym_display.len) &&
 		(strncmp(from_body->display.s, anonym_display.s, anonym_display.len)==0)){
-		LOG(L_INFO,"DBG:"M_NAME":E_is_anonymous_user: using anonymous identity\n");
+		LM_DBG("using anonymous identity\n");
 		return CSCF_RETURN_TRUE;
 	}
 
@@ -767,7 +767,7 @@ int E_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (is_e_dialog_dir(msg, call_id,dir))
 		return CSCF_RETURN_TRUE;
 	else {
-		LOG(L_ERR, "ERR:"M_NAME":E_is_in_dialog: could not find the dialog "
+		LM_DBG("E_is_in_dialog: could not find the dialog "
 				"with the callid %.*s and dir %s\n", call_id.len, call_id.s, str1);
 		return CSCF_RETURN_FALSE;
 	}
@@ -825,14 +825,14 @@ int E_422_session_expires(struct sip_msg* msg, char* str1, char* str2)
 	str hdr = {pkg_malloc(32), 0};
 
 	if (!hdr.s) {
-		LOG(L_ERR, "ERR:"M_NAME":E_422_session_expires(): no memory for hdr\n");
+		LM_ERR("no memory for hdr\n");
 		goto error;
 	}
 
 	hdr.len = snprintf(hdr.s, 31, "Min-SE: %d\r\n", ecscf_min_se);
 
 	if (!cscf_add_header_rpl(msg, &hdr)) {
-		LOG(L_ERR, "ERR:"M_NAME":E_422_session_expires(): Can't add header\n");
+		LM_ERR("Can't add Min-SE header\n");
 		goto error;
  	}
 	
@@ -888,7 +888,7 @@ int E_check_session_expires(struct sip_msg* msg, char* str1, char* str2)
 		new_min_se.len = 11/*int value*/ + str_min_se.len+3;
 		new_min_se.s = pkg_malloc(new_min_se.len+1);
 		if (!new_min_se.s) {
-			LOG(L_ERR,"ERR:"M_NAME":E_check_session_expires: Error allocating %d bytes\n",new_min_se.len);
+			LM_ERR("Error allocating %d bytes\n",new_min_se.len);
 			goto error;
 		}
 		new_min_se.len = snprintf(new_min_se.s, new_min_se.len, "%.*s %d\r\n",str_min_se.len, str_min_se.s, ecscf_min_se);
@@ -899,7 +899,7 @@ int E_check_session_expires(struct sip_msg* msg, char* str1, char* str2)
 			new_ses_exp.len = 11 + str_se.len+3;
 			new_ses_exp.s = pkg_malloc(new_ses_exp.len+1);
 			if (!new_ses_exp.s) {
-				LOG(L_ERR,"ERR:"M_NAME":E_check_session_expires: Error allocating %d bytes\n",new_ses_exp.len);
+				LM_ERR("Error allocating %d bytes\n",new_ses_exp.len);
 				goto error;
 			}
 			new_ses_exp.len = snprintf(new_ses_exp.s, new_ses_exp.len, "%.*s %d\r\n",str_se.len, str_se.s, ecscf_min_se);
@@ -941,12 +941,12 @@ int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	switch(str2[0]){
 		case '0': anonymous = 0; break;
 		case '1': anonymous = 1; break;
-		default: LOG(L_ERR, "ERR:"M_NAME":E_save_dialog(): invalid str2 parameter\n");
+		default: LM_ERR("invalid str2 parameter\n");
 			 return CSCF_RETURN_BREAK;
 	}
 
 	if (!find_dialog_aor(msg,dir,&aor)){
-		LOG(L_ERR,"ERR:"M_NAME":E_save_dialog(): Error retrieving %s contact\n",str1);
+		LM_ERR("Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
 		
@@ -954,10 +954,10 @@ int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":E_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
+	LM_DBG("saving %s dialog with Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
 	if (is_e_dialog(call_id,aor,dir)){
-		LOG(L_ERR,"ERR:"M_NAME":E_save_dialog: dialog already exists!\n");	
+		LM_ERR("dialog already exists!\n");	
 		return CSCF_RETURN_TRUE;
 	}
 	
@@ -1064,7 +1064,7 @@ int update_dialog_on_reply(struct sip_msg *msg, e_dialog *d)
 			new_ses_exp.len = 11/*int value*/ + str_se.len+s_refresher.len+8;
 			new_ses_exp.s = pkg_malloc(new_ses_exp.len+1);
 			if (!new_ses_exp.s) {
-				LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ses_exp.len);
+				LM_ERR("Error allocating %d bytes\n",new_ses_exp.len);
 				goto error;
 			}
 			new_ses_exp.len = snprintf(new_ses_exp.s, new_ses_exp.len, "%.*s %d; %.*suac\r\n",str_se.len, str_se.s, (int)d->lr_session_expires ,s_refresher.len, s_refresher.s);
@@ -1074,7 +1074,7 @@ int update_dialog_on_reply(struct sip_msg *msg, e_dialog *d)
 				/* walk through all Require headers to find first require header*/
 				res = parse_headers(msg, HDR_EOH_F, 0);
 				if (res == -1) {
-					ERR("Error while parsing headers (%d)\n", res);
+					LM_ERR("Error while parsing headers (%d)\n", res);
 					return 0; /* what to return here ? */
 				}
 				
@@ -1086,7 +1086,7 @@ int update_dialog_on_reply(struct sip_msg *msg, e_dialog *d)
 							new_ext.len = str_require.len + 1/* */+h_req->body.len + 7;/*, timer*/
 							new_ext.s = pkg_malloc(new_ext.len);
 							if (!new_ext.s) {
-								LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ext.len);
+								LM_ERR("Error allocating %d bytes\n",new_ext.len);
 								goto error;
 							}			
 							new_ext.len = snprintf(new_ext.s, str_require.len, "%.*s %.*s, timer\r\n", str_require.len, str_require.s, h_req->body.len-2, h_req->body.s);
@@ -1096,7 +1096,7 @@ int update_dialog_on_reply(struct sip_msg *msg, e_dialog *d)
 							new_ext.len = str_require.len + 1/*space*/ + h_req->body.len + 9;/*, timer\r\n*/
 							new_ext.s = pkg_malloc(new_ext.len);
 							if (!new_ext.s) {
-								LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ext.len);
+								LM_ERR("Error allocating %d bytes\n",new_ext.len);
 								goto error;
 							}			
 							new_ext.len = snprintf(new_ext.s, str_require.len, "%.*s %.*s, timer\r\n", str_require.len, str_require.s, h_req->body.len, h_req->body.s);
@@ -1173,18 +1173,18 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_update_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
+	LM_DBG("updating %s dialog with Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id, dir);
 	if (!d){
-		LOG(L_INFO,"INFO:"M_NAME":E_update_dialog: dialog does not exists!\n");	
+		LM_ERR("dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 
 	
 	if (msg->first_line.type==SIP_REQUEST){
 		/* Request */
-		LOG(L_DBG,"DBG:"M_NAME":E_update_dialog(%s): Method <%.*s> \n",str1,
+		LM_DBG("updating (%s) dialog, Method <%.*s> \n",str1,
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq>d->last_cseq) d->last_cseq = cseq;
@@ -1249,7 +1249,7 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}else{
 		/* Reply */
 		response = msg->first_line.u.reply.statuscode;
-		LOG(L_DBG,"DBG:"M_NAME":E_update_dialog(%s): <%d> \n",str1,response);
+		LM_DBG("update dialog (%s): <%d> \n",str1,response);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq==0 || h==0) return CSCF_RETURN_FALSE;
 		if (d->first_cseq==cseq && d->method_str.len == ((struct cseq_body *)h->parsed)->method.len &&
@@ -1353,13 +1353,13 @@ int E_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_drop_dialog(%s): Call-ID <%.*s> DIR[%d]\n",
+	LM_DBG("dropping (%s) dialog with Call-ID <%.*s> and DIR[%d]\n",
 		str1,call_id.len,call_id.s,
 		dir);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
 	if (!d){
-		LOG(L_ERR,"ERR:"M_NAME":E_drop_dialog: dialog does not exists!\n");	
+		LM_ERR("dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 
@@ -1398,9 +1398,8 @@ int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2){
 	str call_id, uri = {0,0};
 	str to = {0,0}, to_tag = {0,0};
 
-	LOG(L_DBG, "DBG:"M_NAME":E_replace_to_header: %s\n", str1);
 	if(str1[0] != '0' && str1[0] !='1'){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header: misuse!\n");
+		LM_ERR("misuse!\n");
 		return CSCF_RETURN_ERROR;
 	}
 	
@@ -1409,20 +1408,20 @@ int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2){
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_replace_to_header: Call-ID <%.*s>\n",call_id.len,call_id.s);
+	LM_DBG("Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:message did not create no dialog\n");
+		LM_ERR("message did not create a dialog\n");
 		return CSCF_RETURN_ERROR;
 	}
 
 	if(!cscf_get_to_tag(msg,&to_tag))
 		return CSCF_RETURN_ERROR;
 
-	LOG(L_DBG, "DBG:"M_NAME":E_replace_to_header: to_tag is %.*s\n", to_tag.len, to_tag.s);
+	LM_DBG("to_tag is %.*s\n", to_tag.len, to_tag.s);
 	if(cscf_del_all_headers(msg, HDR_TO_T)==0){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:could not delete the existing To headers\n");
+		LM_ERR("could not delete the existing To headers\n");
 		goto ret_false;
 	}
 
@@ -1437,7 +1436,7 @@ int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2){
 		to.len += to_hdr_tag.len + to_tag.len ;
 	to.s = pkg_malloc(to.len);
 	if (!to.s){
-		LOG(L_ERR, "ERR"M_NAME":E_replace_to_header: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			to.len);
 		goto ret_false;
 	}
@@ -1482,32 +1481,31 @@ int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2){
 	str from = {0,0}, from_tag ={0,0};
 
 	if(str1[0] != '0' && str1[0] !='1'){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_from_header: misuse!\n");
+		LM_ERR("misuse!\n");
 		return CSCF_RETURN_ERROR;
 	}
 	
-	LOG(L_DBG, "DBG:"M_NAME":E_replace_from_header: %s\n", str1);
 
 	if(!cscf_get_from_tag(msg,&from_tag))
 		return CSCF_RETURN_ERROR;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_replace_from_header: from tag %.*s\n",from_tag.len,from_tag.s);
+	LM_DBG("from tag %.*s\n",from_tag.len,from_tag.s);
 
 	enum e_dialog_direction dir = DLG_MOBILE_TERMINATING;
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":E_replace_from_header: Call-ID <%.*s>\n",call_id.len,call_id.s);
+	LM_DBG("Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_from_header:message did not create no dialog\n");
+		LM_ERR("message did not create a dialog\n");
 		return CSCF_RETURN_ERROR;
 	}
 
 	if(cscf_del_all_headers(msg, HDR_FROM_T)==0){
-		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:could not delete the existing From headers\n");
+		LM_ERR("could not delete the existing From headers\n");
 		goto ret_false;
 	}
 
@@ -1519,7 +1517,7 @@ int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2){
 	}
 	from.s = pkg_malloc(from_hdr_s.len + uri.len +from_hdr_mid.len + from_tag.len + from_hdr_e.len);
 	if (!from.s){
-		LOG(L_ERR, "ERR"M_NAME":E_replace_to_header: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			(from_hdr_s.len + uri.len + from_hdr_mid.len + from_tag.len +from_hdr_e.len));
 		goto ret_false;
 	}
@@ -1565,8 +1563,7 @@ int E_fwded_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}
 	
 	if (!(d = is_e_dialog_dir(msg, call_id,dir))){
-		LOG(L_ERR, "ERR:"M_NAME":E_local_rpl_dialog: could not find the dialog "
-				"with the callid %.*s and dir %s\n", call_id.len, call_id.s, str1);
+		LM_ERR("could not find the dialog with the callid %.*s and dir %s\n", call_id.len, call_id.s, str1);
 		return CSCF_RETURN_BREAK;
 	}
 	if(d->forwarded)
@@ -1588,7 +1585,7 @@ int E_drop_all_dialogs(str aor)
 	e_dialog *d,*dn;
 	int i,cnt=0;;
 	
-	LOG(L_DBG,"DBG:"M_NAME":E_drop_all_dialogs: Called for <%.*s>\n",aor.len,aor.s);
+	LM_DBG("called for <%.*s>\n",aor.len,aor.s);
 
 	for(i=0;i<e_dialogs_hash_size;i++){
 		d_lock(i);
@@ -1630,7 +1627,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			dialog_cnt[i]=0;
 	#endif
 		
-	LOG(L_DBG,"DBG:"M_NAME":dialog_timer: Called at %d\n",ticks);
+	LM_DBG("dialog_timer: Called at %d\n",ticks);
 	if (!e_dialogs) e_dialogs = (e_dialog_hash_slot*)param;
 
 	d_act_time();
