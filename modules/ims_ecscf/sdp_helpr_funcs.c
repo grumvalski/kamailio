@@ -89,7 +89,7 @@ int get_mixed_part_delimiter(str* body, str *mp_delimiter)
 	p++;
 	str_type.s = p;
 	str_type.len = body->len - (p - body->s);
-	LOG(L_DBG, "get_mixed_part_delimiter: string to parse: <%.*s>\n",str_type.len,str_type.s); 
+	LM_DBG("get_mixed_part_delimiter: string to parse: <%.*s>\n",str_type.len,str_type.s); 
 	/* skip spaces and tabs if any */
 	while (*p==' ' || *p=='\t')
 		advance(p,1,str_type,error);
@@ -114,7 +114,7 @@ int get_mixed_part_delimiter(str* body, str *mp_delimiter)
 		advance(p,1,str_type,error);
 	mp_delimiter->len = str_type.len - (int)(p-str_type.s);
 	mp_delimiter->s = p;
-	LOG(L_DBG, "DBG: "M_NAME":get_mixed_part_delimiter: delimiter is %.*s\n",
+	LM_DBG("DBG: "M_NAME":get_mixed_part_delimiter: delimiter is %.*s\n",
 			mp_delimiter->len, mp_delimiter->s);
 	return 1;
 
@@ -288,7 +288,7 @@ int extract_bwidth(str *body, str *bwtype, str *bwwitdth)
 	cp1 = (char*)ser_memmem(cp, ":", len, 1);
 	len -= cp1 - cp;
 	if (len <= 0) {
-		LOG(L_ERR, "ERR:"M_NAME":invalid encoding in `b=%.*s'\n", bwtype->len, bwtype->s);
+		LM_ERR("invalid encoding in `b=%.*s'\n", bwtype->len, bwtype->s);
 		return -1;
 	}
 	bwtype->len = cp1 - cp;
@@ -347,7 +347,7 @@ int extract_mediaip(str *body, str *mediaip, int *pf, char *line)
 		cp = eat_space_end(cp + len, mediaip->s + mediaip->len);
 	}
 	if (nextisip != 2 || mediaip->len == 0) {
-		LOG(L_ERR, "ERR:"M_NAME":no `IP[4|6]' in `%s' field\n",line);
+		LM_ERR("no `IP[4|6]' in `%s' field\n",line);
 		return -1;
 	}
 	return 1;
@@ -527,7 +527,7 @@ char* get_sdp_hdr_field(char* buf, char* end, struct hdr_field* hdr)
 				if (match){
 					match++;
 				}else {
-					LOG(L_ERR, "ERR:"M_NAME":bad body for <%s>(%d)\n", hdr->name.s, hdr->type);
+					LM_ERR("bad body for <%s>(%d)\n", hdr->name.s, hdr->type);
 					tmp=end;
 					goto error;
 				}
@@ -537,7 +537,7 @@ char* get_sdp_hdr_field(char* buf, char* end, struct hdr_field* hdr)
 			hdr->body.len=match-hdr->body.s;
 			break;
 		default:
-			//LOG(L_DBG, "DBG:"M_NAME":ignoring header type %d, name %.*s\n", 
+			//LM_DBG("ignoring header type %d, name %.*s\n", 
 			//		hdr->type, hdr->name.len, hdr->name.s);
 			trim_r( hdr->body );
 			hdr->len=tmp-hdr->name.s;
@@ -570,11 +570,11 @@ char *find_sdp_line_delimiter(char* p, char* plimit, str delimiter)
       cp1 = ser_memmem(cp, delimiterhead, plimit-cp, 2);
       if(!cp1)
 	      goto end;
-      //LOG(L_DBG, "DBG:"M_NAME":find_sdp_delimiter matched \"--\"\n");
+      //LM_DBG("find_sdp_delimiter matched \"--\"\n");
       
       if (strncmp(cp1+2, delimiter.s, delimiter.len) == 0){
 	      
-	//      LOG(L_DBG, "DBG:"M_NAME":find_sdp_delimiter matched the delimiter also\n");
+	//      LM_DBG("find_sdp_delimiter matched the delimiter also\n");
 	      if (cp1[-1] == '\n' || cp1[-1] == '\r')
 		      return cp1;
       }

@@ -638,7 +638,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 		goto error_loc;
 	}
 	
-	//LOG(L_DBG, "DBG:"M_NAME":the pidf body to be parsed is %.*s\n",
+	//LM_DBG("the pidf body to be parsed is %.*s\n",
 	//		pidf_body.len, pidf_body.s);
 
 	if(!(presence = xml_parse_string(pidf_body))){
@@ -669,7 +669,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 		xmlFreeDoc(presence->doc);
 		goto error_loc;
 	}
-//	LOG(L_DBG, "DBG:"M_NAME":get_location:printing the location useful tree\n");
+//	LM_DBG("printing the location useful tree\n");
 //	print_element_names(loc);
 
 	d->location = loc;

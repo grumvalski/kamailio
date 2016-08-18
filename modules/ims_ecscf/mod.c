@@ -196,18 +196,18 @@ int fix_parameters()
 	lrf_sip_uri_str.s = lrf_sip_uri;
 	lrf_sip_uri_str.len = strlen(lrf_sip_uri);
 	
-	LOG(L_DBG, "DBG:"M_NAME":fix_parameters: lrf uri: %.*s\n", lrf_sip_uri_str.len, lrf_sip_uri_str.s);
+	LM_DBG("lrf uri: %.*s\n", lrf_sip_uri_str.len, lrf_sip_uri_str.s);
 
 	/* Record-routes */
 	ecscf_record_route_mo.s = pkg_malloc(s_record_route_s.len+s_mo.len+ecscf_name_str.len+s_record_route_e.len);
 	if (!ecscf_record_route_mo.s){
-		LOG(L_ERR, "ERR"M_NAME":fix_parameters: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			s_record_route_s.len+s_mo.len+ecscf_name_str.len+s_record_route_e.len);
 		return 0;
 	}
 	ecscf_record_route_mt.s = pkg_malloc(s_record_route_s.len+s_mt.len+ecscf_name_str.len+s_record_route_e.len);
 	if (!ecscf_record_route_mt.s){
-		LOG(L_ERR, "ERR"M_NAME":fix_parameters: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			s_record_route_s.len+s_mt.len+ecscf_name_str.len+s_record_route_e.len);
 		return 0;
 	}
@@ -258,7 +258,7 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 			
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	LM_INFO("Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
 	
@@ -269,13 +269,13 @@ static int mod_init(void)
 	/* load the send_reply function from sl module */
     	sl_reply = find_export("sl_send_reply", 2, 0);
 	if (!sl_reply) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init: This module requires sl module\n");
+		LM_ERR("This module requires sl module\n");
 		goto error;
 	}
 	
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
-		LOG(L_ERR, "ERR:"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
+		LM_ERR("Can not import load_tm. This module requires tm module\n");
 		goto error;
 	}
 	if (load_tm(&tmb) == -1)
@@ -283,7 +283,7 @@ static int mod_init(void)
 
 	/* init the dialog storage */
 	if (!e_dialogs_init(ecscf_dialogs_hash_size)){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
+		LM_ERR("Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
 	ecscf_dialog_count = shm_malloc(sizeof(int));
@@ -306,8 +306,7 @@ extern gen_lock_t* process_lock;		/* lock on the process table */
  */
 static int mod_child_init(int rank)
 {
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module in child [%d] \n",
-		rank);
+	LM_INFO("Initialization of module in child [%d] \n", rank);
 	/* don't do anything for main process and TCP manager process */
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
@@ -323,7 +322,7 @@ extern gen_lock_t* process_lock;		/* lock on the process table */
 static void mod_destroy(void)
 {
 	int do_destroy=0;
-	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
+	LM_INFO("child exit\n");
 	
 	lock_get(process_lock);
 	if((*shutdown_singleton)==0){

@@ -95,7 +95,7 @@ int release_call_confirmed(e_dialog *d, int reason_code, str reason_text)
 	str hdrs={0,0};	
 	char buf[256];
 	
-	LOG(L_INFO,"DBG:"M_NAME":release_call_confirmed(): Releasing call <%.*s> DIR[%d].\n",
+	LM_DBG("Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
 	
 	r.len = snprintf(buf,256,"%.*s%d%.*s%.*s%.*s",
@@ -109,7 +109,7 @@ int release_call_confirmed(e_dialog *d, int reason_code, str reason_text)
 	hdrs.len = r.len+content_length_s.len;	
 	hdrs.s = pkg_malloc(hdrs.len);
 	if (!hdrs.s){
-		LOG(L_INFO,"DBG:"M_NAME":release_call_confirmed(): Error allocating %d bytes.\n",hdrs.len);
+		LM_ERR("Error allocating %d bytes.\n",hdrs.len);
 		hdrs.len=0;
 		goto error;
 	}
@@ -135,8 +135,7 @@ int release_call_confirmed(e_dialog *d, int reason_code, str reason_text)
 	d->is_releasing++;
 		
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
-		LOG(L_ERR,"ERR:"M_NAME":release_call_confirmed(): had to delete silently"
-			       " dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
+		LM_ERR("had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_e_dialog(d);
 		goto error;
 	}
@@ -187,12 +186,12 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
   	call_id.s+=9;
   	call_id.len-=11;
 	
-	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a BYE for a call release for <%.*s> DIR[%d].\n",
+	LM_DBG("Received a BYE for a call release for <%.*s> DIR[%d].\n",
 		call_id.len,call_id.s,dir);
 	
 	d = get_e_dialog_dir(call_id,dir);
 	if (!d)	{
-		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a BYE for a call "
+		LM_ERR("Received a BYE for a call "
 				"release but there is no dialog for <%.*s> DIR[%d].\n",
 			call_id.len,call_id.s,dir);
 		return;
@@ -241,7 +240,7 @@ int release_call_previous(e_dialog *d,enum release_call_situation situation,int 
 	str hdrs={0,0};	
 	char buf[256];
 	
-	LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Releasing call <%.*s> DIR[%d].\n",
+	LM_DBG("Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
 	
 	r.len = snprintf(buf,256,"%.*s%d%.*s%.*s%.*s",
@@ -255,7 +254,7 @@ int release_call_previous(e_dialog *d,enum release_call_situation situation,int 
 	hdrs.len = r.len+content_length_s.len;	
 	hdrs.s = pkg_malloc(hdrs.len);
 	if (!hdrs.s){
-		LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Error allocating %d bytes.\n",hdrs.len);
+		LM_ERR("Error allocating %d bytes.\n",hdrs.len);
 		hdrs.len=0;
 		goto error;
 	}
@@ -281,8 +280,7 @@ int release_call_previous(e_dialog *d,enum release_call_situation situation,int 
 	d->is_releasing++;
 		
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
-		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently "
-				"dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
+		LM_ERR("had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_e_dialog(d);
 		goto error;
 	}
@@ -440,7 +438,7 @@ done:
 	
 	if (msg->first_line.type== SIP_REQUEST)
 	{
-		LOG(L_ERR,"ERR: P_release_call_on_reply called with a request\n");
+		LM_ERR("P_release_call_on_reply called with a request\n");
 		return CSCF_RETURN_FALSE;
 	}
 	
@@ -458,7 +456,7 @@ done:
 			return CSCF_RETURN_TRUE;
 		}
 	} else {
-		LOG(L_ERR,"ERR:"M_NAME "P_release_call_onreply :  unable to find dialog\n");
+		LM_ERR("P_release_call_onreply :  unable to find dialog\n");
 		return CSCF_RETURN_BREAK;
 	}
 	
@@ -487,7 +485,7 @@ int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum e_dialog
 			 * and the ACK is never replied it would be a bug if i did*/
 			cbp = shm_malloc(sizeof(enum e_dialog_direction));
 			if (!cbp){
-				LOG(L_ERR,"ERR:"M_NAME":send_request(): error allocating %d bytes\n",(int)sizeof(enum e_dialog_direction));
+				LM_ERR("error allocating %d bytes\n",(int)sizeof(enum e_dialog_direction));
 				return 0;
 			}
 			*cbp=dir;
@@ -531,9 +529,9 @@ void alter_dialog_route_set(dlg_t *d,enum e_dialog_direction dir)
 		default:
 			return;
 	}
-	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
+	//LM_CRIT("Looking for <%.*s> in\n",p.len,p.s);
 	//for(r=d->route_set;r!=NULL;r=r->next) 
-	//	LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+	//	LM_CRIT("<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
 		
 	for(r=d->route_set;r!=NULL;r=r->next) {
 		if (r->nameaddr.uri.len>=p.len && 

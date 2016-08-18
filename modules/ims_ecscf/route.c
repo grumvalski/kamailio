@@ -71,7 +71,7 @@ int E_add_esqk(struct sip_msg * msg, str esqk){
 
 	y.s = pkg_malloc(esqk_hdr_s.len + esqk.len +esqk_hdr_e.len);
 	if (!y.s){
-		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			esqk.len);
 		goto ret_false;
 	}
@@ -103,19 +103,19 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 	str x = {0,0},to = {0,0};
 
 	if(!psap_uri.len || !psap_uri.s){
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap: invalid psap_uri parameter\n");
+		LM_ERR("invalid psap_uri parameter\n");
 		goto ret_false;
 	}
 
 	
 	if(cscf_del_all_headers(msg, HDR_TO_T)==0){
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete the existing From headers\n");
+		LM_ERR("could not delete the existing From headers\n");
 		goto ret_false;
 	}
 
 	x.s = pkg_malloc(route_s.len + psap_uri.len +route_e.len);
 	if (!x.s){
-		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			psap_uri.len);
 		x.len=0;
 		goto ret_false;
@@ -124,23 +124,23 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 
 	to.s = pkg_malloc(to_hdr_s.len + psap_uri.len +to_hdr_e.len);
 	if (!to.s){
-		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
+		LM_ERR("Error allocating %d bytes\n",
 			(to_hdr_s.len + psap_uri.len +to_hdr_e.len));
 		goto ret_false;
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":E_fwd_to_psap:psap uri is %.*s\n",
+	LM_DBG("psap uri is %.*s\n",
 			psap_uri.len, psap_uri.s);
 
 	if(rewrite_uri(msg, &psap_uri) < 0) {
-		LOG(L_ERR,"ERR:"M_NAME":E_fwd_to_psap: Error rewritting uri with <%.*s>\n",
+		LM_ERR("Error rewritting uri with <%.*s>\n",
 			psap_uri.len, psap_uri.s);
 		goto ret_false;	
 	} 
 
 	if(set_dst_uri(msg, &psap_uri)){
 	
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap: Could not set the destination uri %.*s\n",
+		LM_ERR("Could not set the destination uri %.*s\n",
 				psap_uri.len, psap_uri.s);
 		goto ret_false;
 	}
@@ -151,7 +151,7 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 	STR_APPEND(x,route_e);	
 
 	if(cscf_del_all_headers(msg, HDR_ROUTE_T)==0){
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete all the existing route headers\n");
+		LM_ERR("could not delete all the existing route headers\n");
 		goto ret_false;
 	}
 
@@ -171,7 +171,7 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 	return CSCF_RETURN_TRUE;
 
 ret_false:
-	LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap: error while preparing to forward to the PSAP\n");
+	LM_ERR("error while preparing to forward to the PSAP\n");
 	if(x.s){
 		pkg_free(x.s);
 		x.s = NULL;
@@ -217,7 +217,7 @@ int E_add_record_route(struct sip_msg* msg, char* str1, char* str2){
 	return CSCF_RETURN_TRUE;
 
 out_of_memory:
-	LOG(L_ERR, "ERR:"M_NAME":E_add_record_route: out of memory\n");
+	LM_ERR("out of memory\n");
 	return CSCF_RETURN_FALSE;
 }
 

@@ -30,20 +30,20 @@ int parse_multipart_body(struct sip_msg * _m, cont_type_e * cnt_type, str * boun
 	
 	body.s = get_body(_m);
 	if (body.s==0) {
-		LOG(L_ERR, "ERR:"M_NAME":parse_multipart_body:failed to get the message body\n");
+		LM_ERR("parse_multipart_body:failed to get the message body\n");
 		return -1;
 	}
 
 	body.len = _m->len -(int)(body.s - _m->buf);
 	if (body.len==0) {
-		LOG(L_DBG, "DBG:"M_NAME":parse_multipart_body:message body has length zero\n");
+		LM_DBG("message body has length zero\n");
 		*cnt_type = NO_CONT;
 		return 0;
 	}
 
 	mime = ecscf_parse_content_type_hdr(_m);
 	if (mime <= 0) {
-		LOG(L_ERR, "DBG:"M_NAME":parse_multipart_body:could not parse the type of body\n");
+		LM_ERR("could not parse the type of body\n");
 		return -1;
 	}
 	if( (((unsigned int)mime)>>16) != TYPE_MULTIPART){
@@ -52,11 +52,10 @@ int parse_multipart_body(struct sip_msg * _m, cont_type_e * cnt_type, str * boun
 	}
 
 	if(get_mixed_part_delimiter(&(_m->content_type->body), boundary) > 0) {
-		LOG(L_DBG, "DBG:"M_NAME":parse_multipart_body: boundary is %.*s\n", 
-					boundary->len, boundary->s);
+		LM_DBG("boundary is %.*s\n", boundary->len, boundary->s);
 		*cnt_type = MULTI_CONT;
 	} else {
-		LOG(L_ERR, "ERR:"M_NAME":parse_multipart_body:could not get the delimiter of the multipart content\n");
+		LM_ERR("could not get the delimiter of the multipart content\n");
 		return -1;
 	}
 	
@@ -77,13 +76,12 @@ int add_body_part(struct sip_msg * msg, str body, str content){
 	str boundary = {NULL, 0};
 
 	if(!msg || !body.s || ! body.len || !content.len || !content.s){
-		LOG(L_ERR,"ERR:"M_NAME":add_body_part: one or more null parameters\n");
+		LM_ERR("one or more null parameters\n");
 		return -1;
 	}
 
 	if(msg->first_line.type!=SIP_REQUEST){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_part: the message is not a request, "
-				"not implemented yet for replies\n");
+		LM_ERR("the message is not a request, not implemented yet for replies\n");
 		return -1;
 	}
 
@@ -99,11 +97,11 @@ int add_body_part(struct sip_msg * msg, str body, str content){
 				  break;
 	}
 	
-	LOG(L_DBG,"DBG:"M_NAME":add_body_part: successfully added the body %.*s\n",
+	LM_DBG("successfully added body %.*s\n",
 			body.len, body.s);
 	return 0;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":add_body_part: could not add the body %.*s\n",
+	LM_ERR("could not add body %.*s\n",
 			body.len, body.s);
 
 	return -1;
@@ -127,19 +125,19 @@ static int add_body_multi_content(struct sip_msg* msg, str body, str content, st
 	str init_cnt_type = msg->content_type->body;
 	STR_PKG_DUP(final_cnt_type, final_def_cnt_type, "add_body_multi_content");
 	if(cscf_replace_string(msg, init_cnt_type, final_cnt_type) == 0){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: could not replace the content type\n");
+		LM_ERR("could not replace the content type\n");
 		goto error1;
 	}
 
 	//create and add the rest of the message
 	rest = create_string4_added_body(body, content);
 	if(!rest.len || !rest.s){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: error creating the rest of the multipart message");
+		LM_ERR("error creating the rest of the multipart message");
 		goto error; 
 	}
 
 	if(!(crt = add_after_body(msg, rest)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: could not add the rest of the message\n");
+		LM_ERR("could not add the rest of the message\n");
 		goto error2;
 	}	
 	return 0;
@@ -165,43 +163,43 @@ static int add_body_single_content(struct sip_msg* msg, str body, str content){
 	str final_cnt_type = {NULL,0};
 	str rest = {NULL, 0};
 
-	LOG(L_DBG, "DBG:"M_NAME":add_body_single_content: adding body %.*s with content %.*s to the message\n",
+	LM_DBG("body %.*s with content %.*s to the message\n",
 			body.len, body.s, content.len, content.s);
 
 	//get the initial content-type, to be used for the first body part
 	init_headers = get_headers_single_body_part(msg);
 	if(!init_headers.s || !init_headers.len){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not create the headers for the initial body part\n");
+		LM_ERR("could not create the headers for the initial body part\n");
 		return -1;
 	}
 	//replace the content type header with multipart/mixed
 	str init_cnt_type = msg->content_type->body;
 	STR_PKG_DUP(final_cnt_type, final_def_cnt_type, "add_body_single_content");
 	if(cscf_replace_string(msg, init_cnt_type, final_cnt_type) == 0){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not replace the content type\n");
+		LM_ERR("could not replace the content type\n");
 		goto error1;
 	}
 	
 	STR_PKG_DUP(first_midd_def_boundary, middle_default_boundary, "add_body_single_content");
 	//add boundary
 	if(!(crt = add_before_body(msg, first_midd_def_boundary)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the first middle boundary\n");
+		LM_ERR("could not add the first middle boundary\n");
 		goto error2;
 	}	
 	//add headers of the initial body part
 	if(!(crt =insert_new_lump_after(crt, init_headers.s, init_headers.len, HDR_EOH_T)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the headers of the initial body\n");
+		LM_ERR("could not add the headers of the initial body\n");
 		goto error3;
 	}
 	//create and add the rest of the message
 	rest = create_string4_added_body(body, content);
 	if(!rest.len || !rest.s){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: error creating the rest of the multipart message");
+		LM_ERR("error creating the rest of the multipart message");
 		goto error; 
 	}
 
 	if(!(crt = add_after_body(msg, rest)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the rest of the multipart message\n");
+		LM_ERR("could not add the rest of the multipart message\n");
 		goto error4;
 	}	
 
@@ -227,15 +225,15 @@ static int add_body_no_content(struct sip_msg* msg, str body, str content){
 
 	STR_PKG_DUP(content_type, content, "add_body_no_content");
 	if(cscf_add_header(msg, &content_type, HDR_CONTENTTYPE_T) == 0){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_no_content: could not add the content type "
-				"header with value %.*s\n", content_type.len, content_type.s);
+		LM_ERR("could not add the content type header with value %.*s\n", 
+				content_type.len, content_type.s);
 		goto error1;
 	}
 	
 	STR_PKG_DUP(added_body, body, "add_body_no_content");
 	struct lump * crt = add_after_body(msg, added_body);
 	if(!crt){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_no_content: could not add the body %.*s\n",
+		LM_ERR("could not add the body %.*s\n",
 				added_body.len, added_body.s);
 		goto error2;
 	}
@@ -256,25 +254,25 @@ struct lump * add_before_body(struct sip_msg * msg, str string){
 	struct lump * res = NULL;
 
 	if (parse_headers(msg, HDR_EOH_F, 0)<0){
-		LOG(L_ERR,"ERR:"M_NAME":add_before_body: error parsing headers\n");
+		LM_ERR("error parsing headers\n");
 		return res;
 	}
 
 	len = 0;
 	char * c = get_body(msg);
 	if(!c){
-		LOG(L_ERR, "ERR:"M_NAME":add_before_body: error getting body\n");
+		LM_ERR("error getting body\n");
 		return res;
 	}
 	offset = (int)(c-msg->buf);
 	struct lump* anchor = anchor_lump(msg, offset, len, HDR_EOH_T);
 	if(!anchor){
-		LOG(L_ERR, "ERR:"M_NAME":add_before_body: error creating anchor\n" );
+		LM_ERR("error creating anchor\n" );
 		return res;
 	}
 
 	if(!(res =insert_new_lump_after(anchor, string.s, string.len, HDR_EOH_T)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_before_body: error creating lump\n" );
+		LM_ERR("error creating lump\n" );
 	}	
 	return res;
 }
@@ -285,7 +283,7 @@ struct lump * add_after_body(struct sip_msg * msg, str string){
 	struct lump * res = NULL;
 
 	if (parse_headers(msg, HDR_EOH_F, 0)<0){
-		LOG(L_ERR,"ERR:"M_NAME":add_after_body: error parsing headers\n");
+		LM_ERR("error parsing headers\n");
 		return res;
 	}
 
@@ -293,12 +291,12 @@ struct lump * add_after_body(struct sip_msg * msg, str string){
 	offset = msg->len;
 	struct lump* anchor = anchor_lump(msg, offset, len, HDR_EOH_T);
 	if(!anchor){
-		LOG(L_ERR, "ERR:"M_NAME":add_after_body: error creating anchor\n" );
+		LM_ERR("error creating anchor\n" );
 		return res;
 	}
 
 	if(!(res =insert_new_lump_after(anchor, string.s, string.len, HDR_EOH_T)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_after_body: error creating lump\n" );
+		LM_ERR("error creating lump\n" );
 	}	
 	return res;
 }
@@ -315,7 +313,7 @@ str get_headers_single_body_part(struct sip_msg * msg){
 
 	content_type = cscf_get_content_type(msg);
 	if(!content_type.s || !content_type.len){
-		LOG(L_ERR, "ERR:"M_NAME":get_headers_single_body_part: invalid content-type header\n");
+		LM_ERR("invalid content-type header\n");
 		return headers;
 	}
 
@@ -329,7 +327,7 @@ str get_headers_single_body_part(struct sip_msg * msg){
 	STR_APPEND(headers, s_end);
 	STR_APPEND(headers, s_end);
 	
-	LOG(L_DBG, "DBG:"M_NAME":get_headers_single_body_part: the headers are: %.*s\n", headers.len, headers.s);
+	LM_DBG("the headers are: %.*s\n", headers.len, headers.s);
 
 	return headers;
 }
@@ -355,7 +353,7 @@ str create_string4_added_body(str body, str content){
 	STR_APPEND(res, s_end);
 	STR_APPEND(res, end_default_boundary);
 
-	LOG(L_DBG, "DBG:"M_NAME":create_string4_added_body: res is %.*s\n",
+	LM_DBG("create_string4_added_body: res is %.*s\n",
 			res.len, res.s);
 	return res;
 }

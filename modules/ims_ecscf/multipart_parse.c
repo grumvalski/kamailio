@@ -54,12 +54,12 @@ int get_pidf_lo_body(struct sip_msg* msg, str * pidf_body){
 
 	ret = get_body_content(msg, pidf_body, type, subtype);
 	if(ret == -1){
-		LOG(L_ERR, "ERR: "M_NAME":get_pidf_lo_body:an error has occured while retrieving the pidf+xml information\n");
+		LM_ERR("an error has occured while retrieving the pidf+xml information\n");
 	}else if (ret == 1){
-		LOG(L_DBG, "DBG: "M_NAME":no body found\n");
+		LM_DBG("no body found\n");
 	}else{
 	
-		LOG(L_DBG, "DBG: "M_NAME":get_pidf_lo_body:content body for pidf+xml object is %.*s\n",
+		LM_DBG("content body for pidf+xml object is %.*s\n",
 			pidf_body->len, pidf_body->s);
 	}
 	return ret;
@@ -79,19 +79,19 @@ int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type,
 
 	body.s = get_body(_m);
 	if (body.s==0) {
-		LOG(L_ERR, "ERR:"M_NAME":get_body_content:failed to get the message body\n");
+		LM_ERR("failed to get the message body\n");
 		return -1;
 	}
 
 	body.len = _m->len -(int)(body.s - _m->buf);
 	if (body.len==0) {
-		LOG(L_DBG, "DBG:"M_NAME":get_body_content:message body has length zero\n");
+		LM_DBG("message body has length zero\n");
 		return 1;
 	}
 
 	mime = ecscf_parse_content_type_hdr(_m);
 	if (mime <= 0) {
-		LOG(L_ERR, "ERR:"M_NAME":get_body_content:could not parse the content type properly\n");
+		LM_ERR("could not parse the content type properly\n");
 		return -1;
 	}
 
@@ -101,27 +101,27 @@ int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type,
 			body_content->len = body.len;
 			return 0;
 		}else{
-			LOG(L_DBG, "DBG:"M_NAME":get_body_content:TYPE_APPLICATION: unknown %d\n",mime&0x00ff);
+			LM_DBG("TYPE_APPLICATION: unknown %d\n",mime&0x00ff);
 			return -1;
 		}
 	} else if ((((unsigned int)mime)>>16) == TYPE_MULTIPART){
 		switch (mime&0x00ff) {
 		case SUBTYPE_MIXED:
 			if(get_mixed_part_delimiter(&(_m->content_type->body),&mp_delimiter) > 0) {
-				LOG(L_DBG, "DBG:"M_NAME":get_body_content: mp_delimiter is %.*s\n", 
+				LM_DBG("mp_delimiter is %.*s\n", 
 						mp_delimiter.len, mp_delimiter.s);
 				return get_mixed_body_content(&body, mp_delimiter, type, subtype, body_content);
 			} else {
-				LOG(L_ERR, "ERR:"M_NAME":get_body_content:could not get the delimiter of the multipart content\n");
+				LM_ERR("could not get the delimiter of the multipart content\n");
 				return -1;
 			}
 		default:
-			LOG(L_DBG, "DBG:"M_NAME":get_body_content: TYPE_MULTIPART: unknown %d\n",mime&0x00ff);
+			LM_DBG("TYPE_MULTIPART: unknown %d\n",mime&0x00ff);
 			return -1;
 		}
 	} 
 
-	LOG(L_DBG, "DBG:"M_NAME":get_body_content: type of mime unknown:%d\n",((unsigned int)mime)>>16);
+	LM_DBG("type of mime unknown:%d\n",((unsigned int)mime)>>16);
 	return -1;
 }
 
@@ -138,7 +138,7 @@ int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int type, un
 	bodylimit = mixed_body->s + mixed_body->len;
 	d1p = find_sdp_line_delimiter(mixed_body->s, bodylimit, delimiter);
 	if (d1p == NULL) {
-		LOG(L_ERR, "ERR:"M_NAME":get_mixed_body_content: empty multipart content\n");
+		LM_ERR("empty multipart content\n");
 		return -1;
 	}
 	found = 0;
@@ -151,7 +151,7 @@ int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int type, un
 		memset(&hf,0, sizeof(struct hdr_field));
 		rest = eat_line(d1p + delimiter.len + 2, d2p - d1p - delimiter.len - 2);
 		if ( rest > d2p ) {
-			LOG(L_ERR, "ERR:"M_NAME":get_mixed_body_content:Unparsable <%.*s>\n", (int)(d2p-d1p), d1p);
+			LM_ERR("Unparsable <%.*s>\n", (int)(d2p-d1p), d1p);
 			return -1;
 		}
 		no_eoh_found = 1;
@@ -169,12 +169,12 @@ int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int type, un
 				if (ret==0)
 					return -1;
 				if (ret!=end) {
-					LOG(L_ERR, "ERR:"M_NAME":get_mixed_body_content:the header CONTENT_TYPE contains "
+					LM_ERR("the header CONTENT_TYPE contains "
 						"more then one mime type :-(!\n");
 					return -1;
 				}
 				if ((mime&0x00ff)==SUBTYPE_ALL || (mime>>16)==TYPE_ALL) {
-					LOG(L_ERR, "ERR:"M_NAME":get_mixed_body_content:invalid mime with wildcard '*' in Content-Type hdr!\n");
+					LM_ERR("invalid mime with wildcard '*' in Content-Type hdr!\n");
 					return -1;
 				}
 				
@@ -188,7 +188,7 @@ int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int type, un
 				return -1;
 				break;
 			default:
-				LOG(L_DBG, "DBG:"M_NAME":get_mixed_body_content:unknown header: <%.*s:%.*s>\n",hf.name.len,hf.name.s,hf.body.len,hf.body.s);
+				LM_DBG("unknown header: <%.*s:%.*s>\n",hf.name.len,hf.name.s,hf.body.len,hf.body.s);
 			}
 		} /* end of while */
 	}
