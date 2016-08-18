@@ -49,6 +49,9 @@
 #include "../../str.h"
 #include "../../modules/tm/h_table.h"
 
+#define ECSCF_NO_PSAP			"No available PSAP"
+#define ECSCF_INTERNAL_ERROR 	"Server Internal Error"
+
 struct initial_tr {
 	/* tells in which hash table entry the initial transaction lives */
 	unsigned int  hash_index;

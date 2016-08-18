@@ -96,7 +96,6 @@ static str psap_uri_hdr_name  = {"PSAP-URI",8};
 extern int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 
 
-#define NO_PSAP 	"no available PSAP"
 
 /* delete the header ESQK if present in the INVITE reply
  * @param inv_repl - the INVITE reply 
@@ -255,7 +254,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 			goto fwd_invite;
 		}
 
-		if(tmb.t_reply(inv_trans->uas.request, 404, NO_PSAP)<0){
+		if(tmb.t_reply(inv_trans->uas.request, 404, ECSCF_NO_PSAP)<0){
 			LM_ERR("Could not reply to the INVITE request\n");
 			goto error;
 		}
@@ -318,7 +317,6 @@ error:
 	.orig = val, \
 };
 
-static fparam_t fp_int_err = FParam_STRING("Internal Error");
 
 /* callback function for the OPTIONS reply
  * @param t - OPTIONS transaction
@@ -344,7 +342,7 @@ void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 
 	if(E_process_options_repl(ps->rpl, inv_trans, ps->code)<0){
 		LM_ERR("Could not process the OPTIONS response\n");
-		tmb.t_reply(inv_trans->uas.request, 500, (char*)&fp_int_err);
+		tmb.t_reply(inv_trans->uas.request, 500, ECSCF_INTERNAL_ERROR);
 	}
 
 	//set the OPTIONS trans as the current one
