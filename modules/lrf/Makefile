@@ -1,0 +1,38 @@
+# $Id: Makefile $date aon $
+#
+# Location Retrieval Function (LRF) including a Routing Determination Function based on a LoST (RFC 5222) client
+#
+# 
+# WARNING: do not run this directly, it should be run by the master Makefile
+
+include ../../Makefile.defs
+auto_gen=
+NAME=lrf.so
+LIBS=
+
+ifeq ($(CROSS_COMPILE),)
+XML2CFG=$(shell which xml2-config)
+endif
+
+ifneq ($(XML2CFG),)
+	DEFS += $(shell $(XML2CFG) --cflags )
+	LIBS += $(shell $(XML2CFG) --libs)
+else
+	DEFS+=-I$(LOCALBASE)/include/libxml2 \
+		-I$(LOCALBASE)/include
+	LIBS+=-L$(LOCALBASE)/lib -lxml2
+endif
+
+ifneq ($(OS),darwin)
+	LIBS += -lrt
+	LIBS += -lpthread
+endif
+
+DEFS+=-DOPENSER_MOD_INTERFACE
+
+SERLIBPATH=../../lib
+SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1 $(SERLIBPATH)/kcore/kcore
+SER_LIBS+=$(SERLIBPATH)/ims/kamailio_ims
+SER_LIBS+=$(SERLIBPATH)/lost/lost_client
+
+include ../../Makefile.modules

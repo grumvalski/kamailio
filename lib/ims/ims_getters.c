@@ -2216,3 +2216,119 @@ int requires_extension(struct sip_msg *m, str *extension)
 	return 0;
 }
 
+/**
+ * Get the content of a certain header.
+ * @param msg - the SIP message 
+ * @param header_name - the name of the SIP header to return the value for.
+ * @returns the list of values in all corresponding headers, pkg_malloced
+ */
+str cscf_get_headers_content(struct sip_msg * msg , str header_name)
+{   
+	str content={0,0};
+	struct hdr_field *h;
+	if (!msg) return content;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LM_ERR("error parsing headers\n");
+    	return content;
+	}
+	h = msg->headers;
+	while(h){
+		if (h->name.len==header_name.len &&
+				strncasecmp(h->name.s,header_name.s,header_name.len)==0){
+			content.len+=h->body.len+1;
+		}
+		h = h->next;
+	}
+	content.len++;/* trailing \0 */
+	content.s = pkg_malloc(content.len);
+	if (!content.s){
+    	LM_ERR("error allocating %d bytes\n",content.len);
+		content.len=0;
+    	return content;
+	}
+	h = msg->headers;
+	content.len=0;
+	while(h){
+		if (h->name.len==header_name.len &&
+				strncasecmp(h->name.s,header_name.s,header_name.len)==0){
+    		if (content.len) content.s[content.len++]=',';
+				memcpy(content.s+content.len,h->body.s,h->body.len);
+				content.len+=h->body.len;
+			}
+			h = h->next;
+	}
+	content.s[content.len]=0;
+	
+	return content; 
+}
+
+/**
+ * Returns the next route.
+ * @param msg - the sip message
+ * @param start - where to start look for, ignoring itself
+ * @returns the the next route header or NULL if no more found
+ */
+struct hdr_field* cscf_get_next_route(struct sip_msg *msg,struct hdr_field *start)                                                                                                                                                                                             
+{
+    struct hdr_field *h;
+
+    if (!msg) return 0;
+
+    if (parse_headers(msg, HDR_EOH_F, 0)<0){
+        LM_ERR("error parsing headers\n");
+        return 0;
+    }
+    if (start) h = start->next;
+    else h = msg->route;
+    while (h){
+        if (h->type == HDR_ROUTE_T)
+        {
+            LM_DBG("Route %.*s\n",h->body.len,h->body.s);
+            if (!h->parsed){
+                if (parse_rr(h)<0){
+                    LM_ERR("Error parsing as Route header\n");
+                    return 0;
+                }
+            }
+            return h;
+        }
+        h = h->next;
+    }
+    return 0;
+}
+
+/**
+ * Returns the next record route header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @returns header field on success or NULL on error 
+ */
+struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start)
+{
+    struct hdr_field *h;
+
+    if (!msg) return 0;
+
+
+    if (parse_headers(msg, HDR_EOH_F, 0)<0){
+        LM_ERR("error parsing headers\n");
+        return 0;
+    }
+    if (start) h = start->next;
+    else h = msg->record_route;
+    while (h){
+        if (h->type == HDR_RECORDROUTE_T)
+        {
+            LM_DBG("RR %.*s\n",h->body.len,h->body.s);
+            if (!h->parsed){
+                if (parse_rr(h)<0){
+                    LM_ERR("Error parsing as Route header\n");
+                    return 0;
+                }
+            }
+            return h;
+        }
+        h = h->next;
+    }
+    return 0;
+}

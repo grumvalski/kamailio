@@ -451,9 +451,9 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	set_uac_req(&uac_r, &options_method, &h, &location, 0, TMCB_LOCAL_COMPLETED, options_resp_cb, (void*)cb_par);
 	if (tmb.t_request(&uac_r, &req_uri, &lrf_sip_uri_str, &ecscf_name_str, &lrf_sip_uri_str) < 0) {
-                LM_ERR("Error sending in transaction\n");
-                goto error;
-    }
+		LM_ERR("Error sending in transaction\n");
+		goto error;
+	}
 	
 	if (h.s) pkg_free(h.s);
 	return 1;

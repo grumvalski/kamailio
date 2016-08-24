@@ -553,5 +553,29 @@ int supports_extension(struct sip_msg *m, str *extension);
 /* returns 1 if given extension is in Require headers, 
  * 0 if not or an error occurred while parsing */
 int requires_extension(struct sip_msg *m, str *extension);
+
+/**
+ * Get the content of a certain header.
+ * @param msg - the SIP message 
+ * @param header_name - the name of the SIP header to return the value for.
+ * @returns the list of values in all corresponding headers, pkg_malloced
+ */
+str cscf_get_headers_content(struct sip_msg * msg , str header_name);
+
+/**
+ * Returns the next route.
+ * @param msg - the sip message
+ * @param start - where to start look for, ignoring itself
+ * @returns the the next route header or NULL if no more found
+ */
+struct hdr_field* cscf_get_next_route(struct sip_msg *msg,struct hdr_field *start);
+
+/**
+ * Returns the next record route header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @returns header field on success or NULL on error 
+ */
+struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start);
 #endif
 

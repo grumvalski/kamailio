@@ -169,7 +169,8 @@ struct module_exports exports = {
 	0, /* exported pseudo-variables */
 	0, /* extra processes */
 	mod_init, /* module initialization function */
-	0, mod_destroy, 
+	0, 
+	mod_destroy, 
 	mod_child_init /* per-child init function */
 };
 
