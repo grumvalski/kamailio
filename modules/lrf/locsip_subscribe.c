@@ -213,7 +213,7 @@ static str contact_e={">;g.oma.locsip=\"TRUE\"\r\n",23};
  * @returns true if OK, false if not, error on failure
  * \todo store the dialog and reSubscribe on the same dialog
  */
-int loc_send_subscribe(loc_subscription *s, str dest, int duration)
+int loc_send_subscribe(loc_subscription *s, str locsip_uri, int duration)
 {
 	uac_req_t uac_r;
 	str h={0,0};
@@ -255,15 +255,15 @@ int loc_send_subscribe(loc_subscription *s, str dest, int duration)
 			LM_ERR("Error creating a dialog for SUBSCRIBE\n");
 			goto error;
 		}
-		set_dest_uri_dialog(s->dialog, dest);
-		if (tmb.t_request_outside(&uac_r, &s->req_uri, &s->req_uri, &lrf_name_str, &s->req_uri) < 0){
+		set_dest_uri_dialog(s->dialog, locsip_uri);
+		if (tmb.t_request_outside(&uac_r, &s->req_uri, &s->req_uri, &lrf_name_str, &locsip_uri) < 0){
 		//if (tmb.t_request_outside(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LM_ERR("Error sending initial request in a SUBSCRIBE dialog\n");
 			goto error;
 		}		
 	}else{
 		/* this is a subsequent subscribe */
-		set_dest_uri_dialog(s->dialog, dest);
+		set_dest_uri_dialog(s->dialog, locsip_uri);
 		if (tmb.t_request_within(&uac_r) < 0){
 		//if (tmb.t_request_within(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LM_ERR("Error sending subsequent request in a SUBSCRIBE dialog\n");
