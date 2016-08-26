@@ -76,29 +76,28 @@ int snd_rcv_LoST(str lost_req, str * result){
 
 	//initiate the CURL handle for the HTTP connenction
 	//"http://lost.open-ims.test/lost/LoSTServlet";
-	LOG(L_DBG, "DBG:"M_NAME":snd_rcv_LoST: lost server: %.*s port %i\n",
+	LM_DBG("lost server: %.*s port %i\n",
 			lost_server.host.len, lost_server.host.s,
 			lost_server.port);
 	conn = lost_http_conn(lost_server.host.s, lost_server.port, result);
 	if(!conn){
 	
-		LOG(L_ERR, "ERR:"M_NAME": snd_rcv_LoST: could not connect to the LoST server [%s]:%i\n",
+		LM_ERR("could not connect to the LoST server [%s]:%i\n",
 				lost_server.host.s, lost_server.port);
 		goto error;
 	}
 	
 	//send the POST request including the xml body content for LoST
-	LOG(L_DBG, "DBG:"M_NAME":snd_rcv_LoST: trying to send %.*s to the lost server\n", 
+	LM_DBG("trying to send %.*s to the lost server\n", 
 			lost_req.len, lost_req.s);
 
 	if(send_POST_data(conn, lost_req)){
-		LOG(L_ERR, "ERR:"M_NAME": snd_rcv_LoST: could not send data %.*s the LoST server [%s]:%i\n",
+		LM_ERR("could not send data %.*s the LoST server [%s]:%i\n",
 		   lost_req.len, lost_req.s, lost_server.host.s, lost_server.port);
 		goto error;
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME": snd_rcv_LoST: the response from the LoST server is %.*s\n",
-			result->len, result->s);
+	LM_DBG("the response from the LoST server is %.*s\n", result->len, result->s);
 	//disconnect the server
 	lost_http_disconn(conn);
 
@@ -133,7 +132,7 @@ str get_psap_by_LoST(user_d * d){
 	
 	char * service_val = pkg_malloc((d->service.len+1)*sizeof(char));
 	if (!service_val){
-		LOG(L_ERR,"ERR:"M_NAME":get_psap_by_LoST: Error allocating %d bytes\n",d->service.len+1);
+		LM_ERR("Error allocating %d bytes\n",d->service.len+1);
 		goto end;
 	}
 	
@@ -142,12 +141,12 @@ str get_psap_by_LoST(user_d * d){
 	
 	if(create_lost_req(location, service_val, d_loc_fmt, &lost_req)){
 	
-		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST:could not create the LoST request\n");
+		LM_ERR("could not create the LoST request\n");
 		goto end;
 	}
 	
 	if(snd_rcv_LoST(lost_req, &result)){
-		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST:could not send the LoST request, setting the default PSAP URI\n");
+		LM_ERR("not send the LoST request, setting the default PSAP URI\n");
 		goto end;
 	}
 	
@@ -155,9 +154,9 @@ str get_psap_by_LoST(user_d * d){
 	root = get_LoST_resp_type(result, &resp_type, &reason);
 	if(resp_type != LOST_OK){
 		
-		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST: LoST response type is not OK\n");
+		LM_ERR("LoST response type is not OK\n");
 		if(reason.s != NULL)
-			LOG(L_DBG, "DBG:"M_NAME": get_psap_by_LoST:reason: %s\n", reason.s);
+			LM_DBG("reason: %s\n", reason.s);
 		
 		goto end;
 	}
@@ -165,11 +164,11 @@ str get_psap_by_LoST(user_d * d){
 	//get the PSAP URI
 	psap_uri = get_mapped_psap(root, &exp_type, &exp_timestamp, &puri);
 	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME": get_psap_by_LoST:LoST response had no valid SIP uri\n");
+		LM_ERR("LoST response had no valid SIP uri\n");
 		goto end;
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":get_psap_by_LoST:found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
+	LM_DBG("found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
 	
 end:
 	if(result.s)
@@ -197,34 +196,33 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 	
 	/* check if we received what we should */
 	if (msg->first_line.type!=SIP_REQUEST) {
-		LOG(L_ERR,"ERR:"M_NAME":LRF_get_psap: The message is not a request\n");
+		LM_ERR("The message is not a request\n");
 		return CSCF_RETURN_ERROR;
 	}
 
 	if (msg->first_line.u.request.method.len!=7||
 		memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
-		LOG(L_WARN,"WARN:"M_NAME":LRF_get_psap: The method is not an OPTIONS, trying to replace the message\n");
+		LM_WARN("The method is not an OPTIONS, trying to replace the message\n");
 
 		msg = get_request_from_reply(NULL);
 		if(! msg || msg->first_line.type!=SIP_REQUEST || msg->first_line.u.request.method.len!=7||
 			memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
 					
-			LOG(L_ERR,"BUG:"M_NAME":LRF_get_psap: The new message is not an OPTIONS request either\n");
+			LM_ERR("The new message is not an OPTIONS request either\n");
 			return CSCF_RETURN_ERROR;
 		}
 	}
 
 
-	LOG(L_INFO, "INFO:"M_NAME":LRF_get_psap \n");
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the service header in the OPTIONS, or could not be parsed\n");
+		LM_ERR("could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 	
 	str callid = cscf_get_call_id(msg, NULL);
 	if(!callid.s || !callid.len){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the callid header in the OPTIONS request\n");
+		LM_ERR("could not find the callid header in the OPTIONS request\n");
 		return CSCF_RETURN_FALSE;
 	}
 
@@ -232,24 +230,24 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 
 	d = get_user_data(user_uri, service, callid);
 	if(!d) {
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not found user data for uri %.*s and service %.*s\n",
+		LM_ERR("could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
 		return CSCF_RETURN_FALSE;
 	}
 
 	//if not using a LoST server
 	if(using_lost_srv){
-		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: LoST server enabled");
+		LM_DBG("LoST server enabled");
 		psap_uri = get_psap_by_LoST(d);
 	}else{
-		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: LoST server disabled");
+		LM_DBG("LoST server disabled");
 	}
 
 	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: no PSAP available");
+		LM_DBG("no PSAP available");
 		goto error;
 	}
-	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:psap uri is %.*s\n", psap_uri.len, psap_uri.s);
+	LM_DBG("psap uri is %.*s\n", psap_uri.len, psap_uri.s);
 
 	STR_SHM_DUP(d->psap_uri, psap_uri, "LRF_get_psap");
 	
@@ -280,31 +278,27 @@ int LRF_has_loc(struct sip_msg* msg, char * str1, char* str2){
 
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc: could not find the service header in the OPTIONS, or could not be parsed\n");
+		LM_ERR("could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	str callid = cscf_get_call_id(msg, NULL);
 	if(!callid.s || !callid.len){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc: could not find the callid header in the OPTIONS request\n");
+		LM_ERR("could not find the callid header in the OPTIONS request\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	user_uri = msg->first_line.u.request.uri;
 	d = get_user_data(user_uri, service, callid);
 	if(!d) {
-		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc: could not found user data for uri %.*s and service %.*s\n",
+		LM_ERR("could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
 		return CSCF_RETURN_FALSE;
 	}
 
 	int ret = get_pidf_lo_body(msg, &pidf_body);
 	if(ret != 0){
-		if(ret==-1)
-			LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
-		else
-			LOG(L_DBG, "DBG:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
-	
+		LM_ERR("could not get the pidf+xml body\n");
 		lrf_unlock(d->hash);
 		return NO_LOC_FOUND;
 	}
@@ -322,7 +316,7 @@ xmlNode * verify_pidf_xml_body(str pidf_body, loc_fmt * crt_loc_fmt){
 	int ret;
 
 	if(!(presence = xml_parse_string(pidf_body))){
-		LOG(L_ERR, "ERR:"M_NAME": verify_pidf_xml_body:invalid xml content\n");
+		LM_ERR("invalid xml content\n");
 		goto error;
 	}
 
@@ -330,20 +324,20 @@ xmlNode * verify_pidf_xml_body(str pidf_body, loc_fmt * crt_loc_fmt){
 
 	if(!(loc = has_loc_info(&ret, presence, crt_loc_fmt))){
 	
-		LOG(L_ERR, "ERR:"M_NAME":verify_pidf_xml_body:could not find a valid location element\n");
+		LM_ERR("could not find a valid location element\n");
 		goto error;
 	}
 
 	if((*crt_loc_fmt == GEO_SHAPE_LOC) || (*crt_loc_fmt == NEW_CIV_LOC) ||
 			(*crt_loc_fmt == OLD_CIV_LOC) || (*crt_loc_fmt == GEO_COORD_LOC)){
 	
-		LOG(L_DBG, "DBG:"M_NAME":verify_pidf_xml_body:LoST supported format, setting the location\n");
+		LM_DBG("LoST supported format, setting the location\n");
 
 	}else if(*crt_loc_fmt == ERR_LOC){
-		LOG(L_ERR, "ERR:"M_NAME":verify_pidf_xml_body:error while parsing the location information\n");
+		LM_ERR("error while parsing the location information\n");
 		goto error;
 	}else{
-		LOG(L_DBG, "DBG:"M_NAME":verify_pidf_xml_body:no LoST supported format\n");
+		LM_DBG("no LoST supported format\n");
 		goto error;
 	}
 
@@ -372,20 +366,20 @@ int LRF_parse_user_loc(struct sip_msg * msg, char* str1, char* str2){
 
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc: could not find the service header in the OPTIONS, or could not be parsed\n");
+		LM_ERR("could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	str callid = cscf_get_call_id(msg, NULL);
 	if(!callid.s || !callid.len){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc: could not find the callid header in the OPTIONS request\n");
+		LM_ERR("could not find the callid header in the OPTIONS request\n");
 		return CSCF_RETURN_FALSE;
 	}
 
 	user_uri = msg->first_line.u.request.uri;
 	d = get_user_data(user_uri, service, callid);
 	if(!d) {
-		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc: could not found user data for uri %.*s and service %.*s\n",
+		LM_ERR("could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
 		return CSCF_RETURN_FALSE;
 	}
@@ -396,7 +390,6 @@ int LRF_parse_user_loc(struct sip_msg * msg, char* str1, char* str2){
 		lrf_unlock(d->hash);
 		return CSCF_RETURN_FALSE;
 	}	
-	//	LOG(L_DBG, "DBG:"M_NAME":LRF_save_user_loc:printing the location useful tree\n");
 //	print_element_names(loc);
 	d->loc = loc;
 	d->l_fmt = crt_loc_fmt;

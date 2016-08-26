@@ -66,7 +66,7 @@
 	}else {\
 		(dest).s = shm_malloc((src).len);\
 		if (!(dest).s){\
-			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+			LM_ERR("Error allocating %d bytes\n",(src).len);\
 			(dest).len = 0;\
 			goto out_of_memory;\
 		}else{\
@@ -84,7 +84,7 @@
 	}else {\
 		(dest).s = pkg_malloc((src).len);\
 		if (!(dest).s){\
-			LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+			LM_ERR("Error allocating %d bytes\n",(src).len);\
 			(dest).len = 0;\
 			goto out_of_memory;\
 		}else{\

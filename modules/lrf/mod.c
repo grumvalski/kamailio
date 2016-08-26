@@ -208,7 +208,7 @@ int fix_parameters()
 	str port;
 	struct sip_uri locsip_srv_parsed_uri;
 	
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	LM_INFO("module initialization\n");
 	lrf_name_str.s = lrf_name;
 	lrf_name_str.len = strlen(lrf_name);
 
@@ -231,8 +231,7 @@ int fix_parameters()
 		car = lost_server_url + 8;
 		lost_server.port = 443;
 	}else{
-		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid URL for the lost server %s\n", 
-			lost_server_url);
+		LM_ERR("invalid URL for the lost server %s\n", lost_server_url);
 		return 0;
 	}
 	car = strchr(car, ':');
@@ -244,29 +243,25 @@ int fix_parameters()
 		else
 			port.len = last_car - car-1;
 	
-		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: string of the lost server port: %.*s\n",port.len, port.s); 
+		LM_DBG("string of the lost server port: %.*s\n",port.len, port.s); 
 	
 		if(str2int(&port, &lost_server.port)){
-			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid port number for the lost server %s\n",
-					lost_server_url);
+			LM_ERR("invalid port number for the lost server %s\n", lost_server_url);
 			return 0;
 		}
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":fix_parameters: lost server host: %.*s port: %u\n", 
-			lost_server.host.len, lost_server.host.s, lost_server.port);
+	LM_DBG("lost server host: %.*s port: %u\n", lost_server.host.len, lost_server.host.s, lost_server.port);
 	
 	if(use_locsip){
 		if(parse_uri(locsip_srv_uri_s, strlen(locsip_srv_uri_s), 
 					&locsip_srv_parsed_uri)<0){
-			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: could not parse the locsip server uri %s\n",
-					locsip_srv_uri_s);
+			LM_ERR("could not parse the locsip server uri %s\n", locsip_srv_uri_s);
 			return 0;
 		}
 		locsip_srv_uri.s = locsip_srv_uri_s;
 		locsip_srv_uri.len = strlen(locsip_srv_uri_s);
-		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: locsip server uri %.*s\n", 
-				locsip_srv_uri.len, locsip_srv_uri.s);
+		LM_DBG("locsip server uri %.*s\n", locsip_srv_uri.len, locsip_srv_uri.s);
 	}
 	
 	return 1;
@@ -280,7 +275,7 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 			
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	LM_INFO("module initialization\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
 	
@@ -291,30 +286,30 @@ static int mod_init(void)
 	/* load the send_reply function from sl module */
     	sl_reply = find_export("sl_send_reply", 2, 0);
 	if (!sl_reply) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init: This module requires sl module\n");
+		LM_ERR("This module requires sl module\n");
 		goto error;
 	}
 	
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
-		LOG(L_ERR, "ERR:"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
+		LM_ERR("Can not import load_tm. This module requires tm module\n");
 		goto error;
 	}
 	if (load_tm(&tmb) == -1)
 		goto error;
 
 	if (using_lost_srv && init_lost_lib()){
-		LOG(L_ERR, "ERR:"M_NAME":mod_init: Error initializing the LoST library\n");
+		LM_ERR("Error initializing the LoST library\n");
 		goto error;
 	}
 	
 	if(!init_lrf_user_data(user_d_hash_size)){
-		LOG(L_ERR, "ERR:"M_NAME":mod_init: Error initializing the user data\n");
+		LM_ERR("Error initializing the user data\n");
 		goto error;
 	}
 	/* init the dialog storage */
 	if (!lrf_dialogs_init(lrf_dialogs_hash_size)){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
+		LM_ERR("Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
 	lrf_dialog_count = shm_malloc(sizeof(int));
@@ -346,8 +341,7 @@ extern gen_lock_t* process_lock;		/* lock on the process table */
  */
 static int mod_child_init(int rank)
 {
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module in child [%d] \n",
-		rank);
+	LM_INFO("Initialization of module in child [%d] \n", rank);
 	/* don't do anything for main process and TCP manager process */
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
@@ -363,7 +357,7 @@ extern gen_lock_t* process_lock;		/* lock on the process table */
 static void mod_destroy(void)
 {
 	int do_destroy=0;
-	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
+	LM_INFO("child exit\n");
 	
 	lock_get(process_lock);
 	if((*shutdown_singleton)==0){

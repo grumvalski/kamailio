@@ -89,7 +89,7 @@ inline int find_credentials(struct sip_msg* _m, str* _realm,
 	if (*hook == 0) {
 		     /* No credentials parsed yet */
 		if (parse_headers(_m, hdr_flags, 0) == -1) {
-			LOG(L_ERR, "find_credentials(): Error while parsing headers\n");
+			LM_ERR("Error while parsing headers\n");
 			return -1;
 		}
 	}
@@ -104,7 +104,7 @@ inline int find_credentials(struct sip_msg* _m, str* _realm,
 		res = parse_credentials(ptr);
 		ptr->type = HDR_AUTHORIZATION_T;
 		if (res < 0) {
-			LOG(L_ERR, "find_credentials(): Error while parsing credentials\n");
+			LM_ERR("Error while parsing credentials\n");
 			return (res == -1) ? -2 : -3;
 		} else if (res == 0) {
 			if (_realm->len) {
@@ -126,7 +126,7 @@ inline int find_credentials(struct sip_msg* _m, str* _realm,
 
 		prev = ptr;
 		if (parse_headers(_m, hdr_flags, 1) == -1) {
-			LOG(L_ERR, "find_credentials(): Error while parsing headers\n");
+			LM_ERR("Error while parsing headers\n");
 			return -4;
 		} else {
 			if (prev != _m->last_header) {
@@ -188,7 +188,7 @@ static inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
 	if (*hook == 0) {
 		     /* No credentials parsed yet */
 		if (parse_headers(_m, hdr_flags, 0) == -1) {
-			LOG(L_ERR, "find_credentials(): Error while parsing headers\n");
+			LM_ERR("find_credentials(): Error while parsing headers\n");
 			return -1;
 		}
 	}
@@ -214,7 +214,7 @@ static inline int find_credentials_noparse(struct sip_msg* _m, str* realm,
 		
 		prev = ptr;
 		if (parse_headers(_m, hdr_flags, 1) == -1) {
-			LOG(L_ERR, "find_credentials(): Error while parsing headers\n");
+			LM_ERR("Error while parsing headers\n");
 			return -4;
 		} else {
 			if (prev != _m->last_header) {

@@ -415,11 +415,11 @@ int terminate_lrf_dialog(lrf_dialog *d)
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_lrf_dialog(): Not needed for SUBSCRIBE dialogs - silent drop on expiration.\n");
+			LM_ERR("Not needed for SUBSCRIBE dialogs - silent drop on expiration.\n");
 			return 0;
 			break;
 		default:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_lrf_dialog(): Not implemented yet for method[%d]!\n",d->method);
+			LM_ERR("Not implemented yet for method[%d]!\n",d->method);
 			return 0;
 	}*/
 	return 0;
@@ -606,14 +606,14 @@ int LRF_422_session_expires(struct sip_msg* msg, char* str1, char* str2)
 	str hdr = {pkg_malloc(32), 0};
 	
 	if (!hdr.s) {
-		LOG(L_ERR, "ERR:"M_NAME":LRF_422_session_expires(): no memory for hdr\n");
+		LM_ERR("no memory for hdr\n");
 		goto error;
 	}
 
 	//hdr.len = snprintf(hdr.s, 31, "Min-SE: %d\r\n", pcscf_min_se);
 
 	if (!cscf_add_header_rpl(msg, &hdr)) {
-		LOG(L_ERR, "ERR:"M_NAME":LRF_422_session_expires(): Can't add header\n");
+		LM_ERR("Can't add header\n");
 		goto error;
  	}
 	
@@ -656,7 +656,7 @@ int fixup_save_dialog(void** param, int param_no){
 	str = (char*) *param;
 	if(!str || str[0] == '\0'){
 	
-		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: NULL param 2\n");
+		LM_ERR("NULL param 2\n");
 		return -1;
 	}
 
@@ -667,8 +667,7 @@ int fixup_save_dialog(void** param, int param_no){
 	}else if (len ==9 && strncmp(str, "non-emerg", 9)==0){
 		str[0] = '0';
 	}else {
-		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: invalid param 2, "
-				"possible values are \"emerg\" or \"non-emerg\"\n");
+		LM_ERR("invalid param 2, possible values are \"emerg\" or \"non-emerg\"\n");
 		return -1;
 	}	
 
@@ -719,7 +718,7 @@ int LRF_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	dir = get_dialog_direction(str1);
 	
 	if (!find_dialog_contact(msg,dir, &target_uri)){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_is_in_dialog(): Error retrieving %s contact\n",str1);
+		LM_ERR("Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
 		
@@ -727,10 +726,10 @@ int LRF_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":LRF_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
+	LM_DBG("save dialog (%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 	
 	if (is_lrf_dialog(call_id, &dir)){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_save_dialog: dialog already exists!\n");	
+		LM_ERR("dialog already exists!\n");	
 		return CSCF_RETURN_TRUE;
 	}
 	
@@ -1043,12 +1042,12 @@ int LRF_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0) 
 			{
-				LOG(L_INFO,"DBG:"M_NAME":LRF_update_dialog(%.*s): Update expiration time to %d via Expire header 2\n",call_id.len,call_id.s,expires);
+				LM_DBG("Update expiration time for Call-ID %.*s to %d via Expire header 2\n",call_id.len,call_id.s,expires);
 				d->expires = d_act_time()+expires;
 			}
 			else
 			{
-				LOG(L_INFO,"INF:"M_NAME": update_dialog(%.*s): d->expires+=lrf_dialogs_expiration_time 4\n",call_id.len,call_id.s);
+				LM_DBG("update_dialog(%.*s): d->expires+=lrf_dialogs_expiration_time 4\n",call_id.len,call_id.s);
 				d->expires = d_act_time()+lrf_dialogs_expiration_time;
 			}
 			d->lr_session_expires = 0;		
@@ -1056,7 +1055,7 @@ int LRF_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}else{
 		/* Reply */
 		response = msg->first_line.u.reply.statuscode;
-		LOG(L_DBG,"DBG:"M_NAME":LRF_update_dialog(%s): <%d> \n",str1,response);
+		LM_DBG("update_dialog(%s): <%d> \n",str1,response);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq==0 || h==0) return CSCF_RETURN_FALSE;
 		if (d->first_cseq==cseq && d->method_str.len == ((struct cseq_body *)h->parsed)->method.len &&
@@ -1170,7 +1169,7 @@ int LRF_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (msg->first_line.type==SIP_REPLY) req = get_request_from_reply(msg);
 	else req = msg;
 	if (!find_dialog_contact(req,dir,&target_uri)){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_is_in_dialog(): Error retrieving %s contact\n",str1);
+		LM_ERR("Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
 		
@@ -1178,14 +1177,14 @@ int LRF_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":LRF_drop_dialog(%s): Call-ID <%.*s>: target <%.*s>\n",
+	LM_DBG("drop dialog(%s): Call-ID <%.*s>: target <%.*s>\n",
 		str1,call_id.len,call_id.s,
 		target_uri.len, target_uri.s);
 	d = get_lrf_dialog(call_id, &dir);
 	if (!d)
 		d = get_lrf_dialog(call_id, NULL);
 	if (!d){
-		LOG(L_INFO,"INFO:"M_NAME":LRF_drop_dialog: dialog does not exists!\n");	
+		LM_ERR("dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 
@@ -1221,7 +1220,7 @@ int LRF_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	dir = get_dialog_direction(str1);
 	
 	if (!find_dialog_contact(msg,dir,&target_uri)){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_follows_dialog_routes(): Error retrieving %s contact\n",str1);
+		LM_ERR("Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
 		
@@ -1229,20 +1228,20 @@ int LRF_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes(%s): Call-ID <%.*s> TARGET <%.*s>\n",
+	LM_DBG("(%s): Call-ID <%.*s> TARGET <%.*s>\n",
 		str1,call_id.len,call_id.s,
 		target_uri.len, target_uri.s);
 	d = get_lrf_dialog(call_id, &dir);
 	if (!d)
 		d = get_lrf_dialog(call_id, NULL);
 	if (!d){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_follows_dialog_routes: dialog does not exists!\n");	
+		LM_ERR("dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 	/* todo - fix this to match exactly the first request */
 	if (d->first_cseq == cscf_get_cseq(msg,0) &&
 		d->method == get_dialog_method(msg->first_line.u.request.method)){
-		LOG(L_INFO,"INF:"M_NAME":LRF_follows_dialog_routes: this looks like the initial request (retransmission?)!\n");
+		LM_DBG("this looks like the initial request (retransmission?)!\n");
 		goto ok;		
 	}
 
@@ -1254,29 +1253,29 @@ int LRF_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	}
 	r = (rr_t*) hdr->parsed;	
 	for(i=0;i<d->routes_cnt;i++){
-		LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes:  must <%.*s>\n",
+		LM_DBG("must <%.*s>\n",
 			d->routes[i].len,d->routes[i].s);		
 		if (!r) {
 			hdr = cscf_get_next_route(msg,hdr);
 			if (!hdr) goto nok;
 			r = (rr_t*) hdr->parsed;	
 		}
-		LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes: src %.*s\n",
+		LM_DBG("src %.*s\n",
 			r->nameaddr.uri.len,r->nameaddr.uri.s);		
 		if (r->nameaddr.uri.len==d->routes[i].len &&
 				strncasecmp(r->nameaddr.uri.s,
 					d->routes[i].s,d->routes[i].len)==0)
 		{
-			LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes: src match\n");		
+			LM_DBG("src match\n");		
 		} else {
-			LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes: found <%.*s>\n",
+			LM_DBG("found <%.*s>\n",
 				r->nameaddr.uri.len,r->nameaddr.uri.s);					
 			goto nok;
 		}
 		r = r->next;
 	}
 	if (r) {
-		LOG(L_DBG,"DBG:"M_NAME":LRF_follows_dialog_routes: still has some extra Routes\n");		
+		LM_DBG("still has some extra Routes\n");		
 		goto nok;
 	}
 	else 
@@ -1313,7 +1312,7 @@ int LRF_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	dir = get_dialog_direction(str1);
 		
 	if (!find_dialog_contact(msg,dir,&target_uri)){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_enforce_dialog_routes(): Error retrieving %s contact\n",str1);
+		LM_ERR("Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
 		
@@ -1321,14 +1320,14 @@ int LRF_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":LRF_enforce_dialog_routes(%s): Call-ID <%.*s> TARGET <%.*s>\n",
+	LM_DBG("(%s): Call-ID <%.*s> TARGET <%.*s>\n",
 		str1,call_id.len,call_id.s,
 		target_uri.len, target_uri.s);
 	d = get_lrf_dialog(call_id, &dir);
 	if (!d)
 		d = get_lrf_dialog(call_id, 0);
 	if (!d){
-		LOG(L_ERR,"ERR:"M_NAME":LRF_enforce_dialog_routes: dialog does not exists!\n");	
+		LM_ERR("dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 
@@ -1343,8 +1342,7 @@ int LRF_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 			
 	x.s = pkg_malloc(x.len);
 	if (!x.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_enforce_dialog_routes: Error allocating %d bytes\n",
-			x.len);
+		LM_ERR("Error allocating %d bytes\n", x.len);
 		x.len=0;
 		d_unlock(lrf_dialogs[d->hash].lock);
 		return CSCF_RETURN_ERROR;
@@ -1359,8 +1357,7 @@ int LRF_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 	newuri.s = pkg_malloc(d->routes[0].len);
 	if (!newuri.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_enforce_dialog_routes: Error allocating %d bytes\n",
-			d->routes[0].len);
+		LM_ERR("Error allocating %d bytes\n", d->routes[0].len);
 		d_unlock(lrf_dialogs[d->hash].lock);
 		return CSCF_RETURN_ERROR;
 	}
@@ -1369,13 +1366,13 @@ int LRF_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg->dst_uri = newuri;
 	
-	//LOG(L_ERR,"%.*s",x.len,x.s);
+	//LM_ERR("%.*s",x.len,x.s);
 	d_unlock(lrf_dialogs[d->hash].lock);
 	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
 			return CSCF_RETURN_TRUE;
 		else {
-			LOG(L_ERR,"ERR:"M_NAME":LRF_enforce_dialog_routes: new Route headers added, but failed to drop old ones.\n");
+			LM_ERR("new Route headers added, but failed to drop old ones.\n");
 			return CSCF_RETURN_ERROR;
 		}
 	}
@@ -1407,7 +1404,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			dialog_cnt[i]=0;
 	#endif
 	
-	LOG(L_DBG,"DBG:"M_NAME":dialog_timer: Called at %d\n",ticks);
+	LM_DBG("Called at %d\n",ticks);
 	if (!lrf_dialogs) lrf_dialogs = (lrf_dialog_hash_slot*)param;
 
 	d_act_time();
