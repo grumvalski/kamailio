@@ -129,12 +129,12 @@ int parse_token(char * pch, int len, struct geoloc_body* geo_body){
 
 	return 0;
 no_mem:
-	LOG(L_ERR, "ERROR:parse_geoloc_body: not enough memory\n");
+	LM_ERR("not enough memory\n");
 	return -1;
 
 malformed:
 
-	LOG(L_ERR,"ERROR:parse_geoloc_body: malformed header\n");
+	LM_ERR("malformed header\n");
 	return -1;
 }
 //parsing of the Geolocation header
@@ -169,7 +169,7 @@ int parse_geoloc_body(str body, struct geoloc_body * geo_body){
 	value = geo_body->loc_list;
 	if(!value){
 	
-		LOG(L_ERR, "ERROR:parse_geoloc_body: no location value supplied in the Geolocation header\n");
+		LM_ERR("no location value supplied in the Geolocation header\n");
 		return -1;
 	}
 	
@@ -190,7 +190,7 @@ int parse_geoloc(struct sip_msg * msg){
 		if (parse_headers(msg, HDR_GEOLOCATION_F, 0)==-1)
 			goto error;
 		if (msg->geolocation==0) {
-			DBG("DEBUG:parse_geoloc: hdr not found\n");
+			DBG("hdr not found\n");
 			return 1;
 		}
 	}
@@ -204,7 +204,7 @@ int parse_geoloc(struct sip_msg * msg){
 	/* parse the body */
 	geo_body = (struct geoloc_body*)pkg_malloc(sizeof(struct geoloc_body));
 	if (geo_body==0) {
-		LOG(L_ERR,"ERROR:parse_content_geolocation: no more pkg memory\n");
+		LM_ERR("no more pkg memory\n");
 		goto error;
 	}
 	memset(geo_body,0,sizeof(struct geoloc_body));
@@ -244,17 +244,17 @@ void print_geoloc(struct geoloc_body *  geo_body){
 
 	struct loc_value * value;
 	if(!geo_body){
-		LOG(L_ERR, "ERROR:print_geoloc: null parameter\n");
+		LM_ERR("null parameter\n");
 		return;
 	}
 
-	LOG(L_DBG, "DBG:print_geoloc: retrans parameter: %s\n", (geo_body->retrans_par>0)?"yes":"no");
+	LM_DBG("retrans parameter: %s\n", (geo_body->retrans_par>0)?"yes":"no");
 	for(value = geo_body->loc_list; value!= NULL; value = value->next){
 	
-		LOG(L_DBG, "DBG: print_geoloc: location value has the uri: user %.*s, host %.*s\n",
+		LM_DBG("location value has the uri: user %.*s, host %.*s\n",
 				value->locURI.user.len, value->locURI.user.s,
 				value->locURI.host.len, value->locURI.host.s);
-		LOG(L_DBG, "DBG: inserted by %.*s and used for routing %s\n",
+		LM_DBG("inserted by %.*s and used for routing %s\n",
 				value->inserted_by.len, value->inserted_by.s,
 				(value->used_for_routing>0)?"yes":"no");
 	}

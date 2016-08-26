@@ -92,6 +92,7 @@ static inline char* skip_ws(char* p, unsigned int size)
 #include "case_reas.h"     /* Reason */
 #include "case_p_as.h"     /* P-Asserted-Identity */
 #include "case_p_pr.h"     /* P-Preferred-Identity */
+#include "case_geol.h"     /* Geolocation */
 
 /*@} */
 
@@ -157,7 +158,8 @@ READ4(val)
 	case _priv_: priv_CASE; \
 	case _reas_: reas_CASE; \
 	case _p_as_: p_as_CASE; \
-	case _p_pr_: p_pr_CASE;
+	case _p_pr_: p_pr_CASE; \
+	case _geol_: geol_CASE;\
 
 
 #define PARSE_COMPACT(id)          \

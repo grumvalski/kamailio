@@ -46,6 +46,7 @@
 #include "parse_allow.h"
 #include "../ut.h"
 #include "parse_ppi_pai.h"
+#include "parse_geoloc.h"
 
 /** Frees a hdr_field structure.
  * WARNING: it frees only parsed (and not name.s, body.s)
@@ -164,6 +165,10 @@ void clean_hdr_field(struct hdr_field* const hf)
 
 		case HDR_VIA_T:
 			free_via_list(hf->parsed);
+			break;
+
+		case HDR_GEOLOCATION_T:
+			free_geoloc((struct geoloc_body **)h_parsed);
 			break;
 
 		/* headers with no alloc for parsed structure */

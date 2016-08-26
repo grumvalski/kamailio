@@ -105,8 +105,8 @@ enum _hdr_types_t {
 	HDR_PATH_T                         /*!< Path header field */,
 	HDR_PRIVACY_T				       /*!< Privacy header field */,
 	HDR_REASON_T				       /**< Reason header field */,
-	HDR_GEOLOCATION_T					/* Geolocation header field */,
-	HDR_ESQK_T							/* ESQK header field, for Emergency Services */,
+	HDR_GEOLOCATION_T					/*!< Geolocation header field */,
+	HDR_ESQK_T							/*!< ESQK header field, for Emergency Services */,
 	HDR_EOH_T					       /*!< End of message header */
 };
 
@@ -240,6 +240,7 @@ static inline int hdr_allocs_parse(struct hdr_field* hdr)
 		case HDR_SUPPORTED_T:
 		case HDR_TO_T:
 		case HDR_VIA_T:
+		case HDR_GEOLOCATION_T:
 			return 1;
 		default:
 			return 0;

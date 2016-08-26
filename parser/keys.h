@@ -205,6 +205,9 @@
 #define _p_pr_ 0x72702d70 /* "p-pr" */
 #define _efer_ 0x72656665 /* "efer" */
 #define _red__ 0x2d646572 /* "red-" */
+
+#define _geol_ 0x6c6f6567   /* "geol" */                                                                                                                                                                                                                                       
+#define _ocat_ 0x7461636f   /* "ocat" */
 /* _iden_ is already defined */
 /* _tity_ is already defined */
 
