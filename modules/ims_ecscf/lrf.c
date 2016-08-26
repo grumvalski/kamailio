@@ -626,7 +626,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	for(value = ((struct geoloc_body*)msg->geolocation->parsed)->loc_list;value!=NULL; value=value->next){
 	
-		if(value->locURI.type != CID_T){
+		if(value->locURI.type != CID_URI_T){
 			LM_ERR("geolocation uri type unsupported\n");
 			goto error_loc;
 		}

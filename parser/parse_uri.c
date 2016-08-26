@@ -115,6 +115,7 @@ int parse_uri(char* buf, int len, struct sip_uri* uri)
 #define SIPS_SCH	0x73706973
 #define TEL_SCH		0x3a6c6574
 #define URN_SCH		0x3a6e7275
+#define CID_SCH     0x3a646963 
 	
 #define case_port( ch, var) \
 	case ch: \
@@ -377,6 +378,8 @@ int parse_uri(char* buf, int len, struct sip_uri* uri)
 		uri->type=TEL_URI_T;
 	}else if (scheme==URN_SCH){
 		uri->type=URN_URI_T;
+	}else if (scheme==CID_SCH){
+		uri->type=CID_URI_T;
 	}else goto error_bad_uri;
 	
 	s=p;
@@ -1196,6 +1199,8 @@ int parse_uri(char* buf, int len, struct sip_uri* uri)
 			break;
 		/* urn: do nothing */
 		case URN_URI_T:
+			break;
+		case CID_URI_T:
 			break;
 		case ERROR_URI_T:
 			LOG(L_ERR, "ERROR: parse_uri unexpected error (BUG?)\n"); 
