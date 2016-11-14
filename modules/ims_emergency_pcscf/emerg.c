@@ -160,32 +160,6 @@ error:
 	return -1;
 }
 
-/* Checks if the Request Uri is used for an Emergency Service
- * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if the case, #CSCF_RETURN_FALSE if not
- */
-int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
-
-	int sos;
-
-	str ruri = {msg->first_line.u.request.uri.s,
-				msg->first_line.u.request.uri.len};
-
-	LM_DBG("checking if the ruri %.*s is an emergency ruri\n", ruri.len, ruri.s);	
-
-	sos = is_emerg_ruri(ruri, NULL);
-	switch(sos){
-	
-		case NOT_URN:	
-		case NOT_EM_URN: 
-			return CSCF_RETURN_ERROR;
-		default: 
-			return CSCF_RETURN_TRUE;
-	}
-}
-
 /**
  * check if the P-CSCF should accept anonymous Emergency calls
  * @param msg - the SIP message

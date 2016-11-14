@@ -57,6 +57,8 @@
 #include "../../rpc_lookup.h"
 #include "../../timer.h"
 
+#include "../../lib/ims/ims_getters.h"
+
 #include "../ims_usrloc_pcscf/usrloc.h"
 #include "../../modules/tm/tm_load.h"
 #include "../../modules/sl/sl.h"
@@ -85,12 +87,12 @@ MODULE_VERSION
 static int mod_init(void);
 static void mod_destroy(void);
 
-static int w_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2);
+static int w_accept_anonym_em_call(struct sip_msg *msg, char *str1, char *str2);
 static int w_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
 static int w_emergency_flag(struct sip_msg *msg,char *str1,char *str2); 
 static int w_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2);
 static int w_emergency_serv_enabled(struct sip_msg *msg,char *str1,char*str2);
-static int w_emergency_ruri(struct sip_msg *msg, char* str1, char* str2);
+static int w_is_emergency_ruri(struct sip_msg *msg, char *str1, char *str2);
 static int w_select_ecscf(struct sip_msg *msg,char *str1,char*str2);
 static int w_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2);
 static int w_is_em_registered(struct sip_msg *msg,char *str1,char *str2);
@@ -113,7 +115,7 @@ static cmd_export_t cmds[]={
 	{"is_anonymous_user",		w_is_anonymous_user,		0, 0, 0, REQUEST_ROUTE},
 	{"emergency_flag",			w_emergency_flag,			0, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"380_em_alternative_serv",	w_380_em_alternative_serv,	1, fixup_380_alt_serv, 0, REQUEST_ROUTE},
-	{"emergency_ruri",			w_emergency_ruri,			0, 0, 0, REQUEST_ROUTE},
+	{"is_emergency_ruri",		w_is_emergency_ruri,			0, 0, 0, REQUEST_ROUTE},
 	{"emergency_serv_enabled",	w_emergency_serv_enabled,	0, 0, 0, REQUEST_ROUTE},
 	{"select_ecscf",			w_select_ecscf,				0, 0, 0, REQUEST_ROUTE},
 	{"enforce_sos_routes",		w_enforce_sos_routes,		0, 0, 0, REQUEST_ROUTE},
@@ -328,8 +330,13 @@ static void mod_destroy(void)
 {
 }
 
-static int w_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2) {
-	return 1;
+static int w_accept_anonym_em_call(struct sip_msg *msg, char *str1, char *str2) {
+	
+	LM_DBG("Check if the P-CSCF is configured to accept an anonymous emergency call or not\n");
+	if(anonym_em_call_support)	
+		return CSCF_RETURN_TRUE;
+	else	
+		return CSCF_RETURN_FALSE;
 }
 
 static int w_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2) {
@@ -348,8 +355,23 @@ static int w_emergency_serv_enabled(struct sip_msg *msg,char *str1,char*str2) {
 	return 1;
 }
 
-static int w_emergency_ruri(struct sip_msg *msg, char* str1, char* str2) {
-	return 1;
+static int w_is_emergency_ruri(struct sip_msg *msg, char *str1, char *str2) {
+	int sos;
+
+	str ruri = {msg->first_line.u.request.uri.s,
+				msg->first_line.u.request.uri.len};
+
+	LM_DBG("checking if the ruri %.*s is an emergency ruri\n", ruri.len, ruri.s);	
+
+	sos = is_emerg_ruri(ruri, NULL);
+
+	switch(sos){
+		case NOT_URN:	
+		case NOT_EM_URN: 
+			return CSCF_RETURN_ERROR;
+		default: 
+			return CSCF_RETURN_TRUE;
+	}
 }
 
 static int w_select_ecscf(struct sip_msg *msg,char *str1,char*str2) {
