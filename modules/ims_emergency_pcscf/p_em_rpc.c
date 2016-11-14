@@ -24,6 +24,7 @@
 #include "em_numbers.h"
 #include "p_em_rpc.h"
 
+extern em_nb_list emerg_nb_list;
 
 static const char* rpc_p_em_dump_doc[2] = {
 	"Dump PCSCF Emergency numbers table",
@@ -36,38 +37,7 @@ static const char* rpc_p_em_reload_doc[2] = {
 	0
 };
 
-/************************ helper functions ****************************/
-
-/*!
- * \brief Add a node for a transaction
- */
-//static inline int rpc_dump_transaction(rpc_t* rpc, void* ctx, void *ih, ts_transaction_t* t)
-//{
-//	void* vh;
-//
-//	if(t==NULL)
-//		return -1;
-//
-//	if(rpc->struct_add(ih, "{", "Transaction", &vh)<0)
-//	{
-//		rpc->fault(ctx, 500, "Internal error creating transaction struct");
-//		return -1;
-//	}
-//	if(rpc->struct_add(vh, "d", "Tindex", t->tindex)<0) {
-//		rpc->fault(ctx, 500, "Internal error adding tindex");
-//		return -1;
-//	}
-//
-//	if(rpc->struct_add(vh, "d", "Tlabel", t->tlabel)<0) {
-//		rpc->fault(ctx, 500, "Internal error adding tlabel");
-//		return -1;
-//	}
-//	return 0;
-//}
-
-
 /*************************** RPC functions *****************************/
-
 
 /*!
  * \brief Dump the content of the tsilo table
@@ -76,14 +46,10 @@ static const char* rpc_p_em_reload_doc[2] = {
  */
 static void rpc_p_em_dump(rpc_t *rpc, void *c)
 {
-	//ts_transaction_t* trans = NULL;
-	//struct ts_urecord* record = NULL;
-	//struct ts_entry* entry = NULL;
-
 	void* th;
-	//void* ah;
-	//void* ih;
-	//void* sh;
+	void* ah;
+	
+	em_nb * emerg_number;
 
 	if (rpc->add(c, "{", &th) < 0)
 	{
@@ -91,62 +57,26 @@ static void rpc_p_em_dump(rpc_t *rpc, void *c)
 		return;
 	}
 
-	res = rpc->struct_add(th, "d{",	"NUMBER", "URN",	&ah);
+	emerg_number = emerg_nb_list;
 	
-	if (res<0)
-	{
-		rpc->fault(c, 500, "Internal error creating inner struct");
-		return;
+	while(emerg_number){
+		if(rpc->struct_add(th, "{", 
+					"ENTRY", &ah) < 0) {
+				rpc->fault(c, 500, "Internal error creating entry top struct");
+				return;
+		}
+		
+		if(rpc->struct_add(ah, "SSu",
+					"NUMBER", &emerg_number->number, 
+					"URN", &emerg_number->urn,
+					"TYPE", emerg_number->type)<0) {
+				rpc->fault(c, 500, "Internal error creating entry struct");
+				return;
+		}
+		
+		emerg_number = emerg_number->next;
 	}
-
-	///* add the entries per hash */
-	//for(i=0,n=0,max=0,ntrans=0; i<t_table->size; i++) {
-	//	lock_entry(&t_table->entries[i]);
-	//	entry = &t_table->entries[i];
-
-	//	n += entry->n;
-	//	if(max<entry->n)
-	//		max= entry->n;
-	//	for( record = entry->first ; record ; record=record->next ) {
-	//		/* add entry */
-	//		if(short_dump==0)
-	//		{
-	//			if(rpc->struct_add(ah, "Sd{",
-	//				"R-URI", &record->ruri,
-	//				"Hash", record->rurihash,
-	//				"Transactions", &ih)<0)
-	//			{
-	//				unlock_entry(&t_table->entries[i]);
-	//				rpc->fault(c, 500, "Internal error creating ruri struct");
-	//				return;
-	//			}
-	//		}
-	//		for( trans=record->transactions ; trans ; trans=trans->next) {
-	//			ntrans += 1;
-	//			if (short_dump==0) {
-	//				if (rpc_dump_transaction(rpc, c, ih, trans) == -1) {
-	//					unlock_entry(&t_table->entries[i]);
-	//					return;
-	//				}
-	//			}
-	//		}
-	//	}
-	//	unlock_entry(&t_table->entries[i]);
-	//}
-
-	///* extra attributes node */
-	//if(rpc->struct_add(th, "{", "Stats",    &sh)<0)	{
-	//	rpc->fault(c, 500, "Internal error creating stats struct");
-	//	return;
-	//}
-	//if(rpc->struct_add(sh, "ddd",
-	//	"RURIs", n,
-	//	"Max-Slots", max,
-	//	"Transactions", ntrans)<0)
-	//{
-	//	rpc->fault(c, 500, "Internal error adding stats");
-	//	return;
-	//}
+	
 }
 /*!
  * \brief Show the transactions for a given R-URI

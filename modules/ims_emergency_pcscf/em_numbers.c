@@ -163,7 +163,7 @@ not_emerg:
 	return NOT_EM_URN;
 
 is_emerg:
-	LM_DBG("we have a valid emergency URN for the URI %.*s\n", len, uri);
+	LM_DBG("we have a valid emergency URN for the URI %.*s (type %d)\n", len, uri, type);
 	return type;
 
 }
