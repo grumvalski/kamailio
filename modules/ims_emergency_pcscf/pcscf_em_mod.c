@@ -110,6 +110,8 @@ char* emerg_numbers_file = CFG_DIR"emerg_info.xml";
 str pcscf_path_orig_em_uri_str={0,0};
 char * pcscf_path_orig_em_uri = "Path: sip:orig.em@pcscf.open-ims.test\r\n";
 
+static str anonym_display = {"Anonymous", 9};
+
 static cmd_export_t cmds[]={
 	/*emergency services exported functions*/
 	{"accept_anonym_em_call",	w_accept_anonym_em_call,	0, 0, 0, REQUEST_ROUTE},

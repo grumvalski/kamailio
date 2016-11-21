@@ -78,15 +78,9 @@ int init_em_alt_serv_body();
 
 void clean_emergency_cntxt();
 
-int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2);
-
-int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
-
-int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2);
+int check_emergency_flag(struct sip_msg *msg);
 
 int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2);
-
-int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2);
 
 int P_enforce_sos_routes(struct sip_msg *msg, char* str1, char* str2);
 

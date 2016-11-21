@@ -163,11 +163,9 @@ error:
 /**
  * Finds if the message comes from a user that made an Emergency Registration
  * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if sos uri parameter in Contact header, #CSCF_RETURN_FALSE if not 
  */
-int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
+int check_emergency_flag(struct sip_msg *msg)
 {
 	contact_t *c;
 	int sos_reg;

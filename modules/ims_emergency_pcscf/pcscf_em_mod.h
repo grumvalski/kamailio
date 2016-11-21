@@ -46,7 +46,6 @@
 #ifndef EM_PCSCF_MOD_H
 #define EM_PCSCF_MOD_H
 
-static str anonym_display = {"Anonymous", 9};
 //extern char* ecscf_uri;
 //extern str ecscf_uri_str;
 //extern int emerg_support;
