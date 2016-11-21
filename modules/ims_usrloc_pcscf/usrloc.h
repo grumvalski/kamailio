@@ -123,6 +123,12 @@ typedef enum sec_type {
     SECURITY_TLS = 2,
 } security_type;
 
+typedef enum reg_type {
+	NORMAL_REG = 1, 
+	EMERG_REG = 2, 
+	ANY_REG = 3
+} reg_type_t;
+
 typedef struct security {
     str sec_header; /**< Security Header value 				*/
     security_type type; /**< Type of security in use			*/
@@ -194,6 +200,7 @@ typedef struct pcontact_info {
     int num_service_routes;
     str* rx_regsession_id;
     enum pcontact_reg_states reg_state;
+	reg_type_t reg_type;
 } pcontact_info_t;
 
 /*! \brief
@@ -220,6 +227,7 @@ typedef struct pcontact {
     str path; /*!< Path header */
     str rx_session_id; /*!< Rx Session ID for registration Rx AF session - not used if not using diameter_rx */
     enum pcontact_reg_states reg_state; /*!< Reg state of contact */
+	reg_type_t reg_type;
     time_t expires; /*!< expires time for contact */
     str* service_routes; /*!< Array of service routes */
     unsigned short num_service_routes; /*!< Number of service routes */
