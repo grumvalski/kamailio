@@ -357,7 +357,7 @@ static int w_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2) {
 }
 
 static int w_emergency_flag(struct sip_msg *msg,char *str1,char *str2) {
-	return 1;
+	return check_emergency_flag(msg);
 }
 
 static int w_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2) {
