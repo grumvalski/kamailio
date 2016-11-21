@@ -177,7 +177,7 @@ int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2)
 		return CSCF_RETURN_FALSE;
 }
 
-static str anonym_display = {"Anonymous", 9};
+//static str anonym_display = {"Anonymous", 9};
 
 /**
  * Finds if the message comes from an anonymous sip uri at this P-CSCF

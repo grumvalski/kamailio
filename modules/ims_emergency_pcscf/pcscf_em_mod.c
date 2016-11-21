@@ -56,6 +56,7 @@
 #include "../../cfg/cfg_struct.h"
 #include "../../rpc_lookup.h"
 #include "../../timer.h"
+#include "../../parser/parse_from.h"
 
 #include "../../lib/ims/ims_getters.h"
 
@@ -115,7 +116,7 @@ static cmd_export_t cmds[]={
 	{"is_anonymous_user",		w_is_anonymous_user,		0, 0, 0, REQUEST_ROUTE},
 	{"emergency_flag",			w_emergency_flag,			0, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"380_em_alternative_serv",	w_380_em_alternative_serv,	1, fixup_380_alt_serv, 0, REQUEST_ROUTE},
-	{"is_emergency_ruri",		w_is_emergency_ruri,			0, 0, 0, REQUEST_ROUTE},
+	{"is_emergency_ruri",		w_is_emergency_ruri,		0, 0, 0, REQUEST_ROUTE},
 	{"emergency_serv_enabled",	w_emergency_serv_enabled,	0, 0, 0, REQUEST_ROUTE},
 	{"select_ecscf",			w_select_ecscf,				0, 0, 0, REQUEST_ROUTE},
 	{"enforce_sos_routes",		w_enforce_sos_routes,		0, 0, 0, REQUEST_ROUTE},
@@ -340,7 +341,19 @@ static int w_accept_anonym_em_call(struct sip_msg *msg, char *str1, char *str2) 
 }
 
 static int w_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2) {
-	return 1;
+	struct to_body * from_body;
+	
+	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0))
+		return CSCF_RETURN_BREAK;
+
+	from_body = (struct to_body*)msg->from->parsed;
+	if((from_body->display.len == anonym_display.len) &&
+			(strncmp(from_body->display.s, anonym_display.s, anonym_display.len)==0)){
+		LM_DBG("using anonymous identity\n");
+		return CSCF_RETURN_TRUE;
+	}
+
+    return CSCF_RETURN_FALSE;
 }
 
 static int w_emergency_flag(struct sip_msg *msg,char *str1,char *str2) {
