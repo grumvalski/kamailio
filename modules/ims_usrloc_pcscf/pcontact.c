@@ -188,6 +188,7 @@ int new_pcontact(struct udomain* _d, str* _contact, struct pcontact_info* _ci, s
 
 	(*_c)->expires = _ci->expires;
 	(*_c)->reg_state = _ci->reg_state;
+	(*_c)->reg_type = _ci->reg_type;
 
 	// Add received Info:
 	if (_ci->received_host.len > 0 && _ci->received_host.s) {

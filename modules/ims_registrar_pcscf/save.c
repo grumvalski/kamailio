@@ -161,6 +161,10 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl, udoma
                                 ci.via_host = puri.host;
                                 ci.via_port = port;
                                 ci.via_prot = puri.proto;
+
+				if (cscf_get_sos_uri_param(c->uri)) 
+					ci.reg_type = EMERG_REG;
+
 				ul.lock_udomain(_d, &puri.host, port, puri.proto);
 				if (ul.get_pcontact(_d, &ci, &pcontact) != 0) { //need to insert new contact
 					if ((expires-local_time_now)<=0) { //remove contact - de-register
@@ -297,6 +301,10 @@ int save_pending(struct sip_msg* _m, udomain_t* _d) {
 	// Set to default, if not set:
 	if (ci.received_port == 0)
 		ci.received_port = 5060;
+	
+	// set sos flag
+	if (cscf_get_sos_uri_param(c->uri)) 
+		ci.reg_type = EMERG_REG;
 
 	ul.lock_udomain(_d, &ci.via_host, ci.via_port, ci.via_prot);
 	if (ul.get_pcontact(_d, &ci, &pcontact) != 0) { //need to insert new contact
