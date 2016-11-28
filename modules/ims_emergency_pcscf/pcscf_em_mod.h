@@ -46,6 +46,8 @@
 #ifndef EM_PCSCF_MOD_H
 #define EM_PCSCF_MOD_H
 
+#include "../ims_usrloc_pcscf/usrloc.h"
+#include "../ims_registrar_pcscf/api.h"
 //extern char* ecscf_uri;
 //extern str ecscf_uri_str;
 //extern int emerg_support;

@@ -60,28 +60,12 @@
 
 #include "../../lib/ims/ims_getters.h"
 
-#include "../ims_usrloc_pcscf/usrloc.h"
 #include "../../modules/tm/tm_load.h"
 #include "../../modules/sl/sl.h"
 
 #include "pcscf_em_mod.h"
 #include "emerg.h"
 #include "p_em_rpc.h"
-/*
-#include "registration.h"
-#include "registrar_storage.h"
-#include "registrar_subscribe.h"
-#include "registrar.h"
-#include "nat_helper.h"
-#include "security.h"
-#include "dlg_state.h"
-#include "sdp_util.h"
-#include "p_persistency.h"
-#include "release_call.h"
-#include "ims_pm_pcscf.h"
-#include "policy_control.h"
-#include "pcc.h"
-*/
 
 MODULE_VERSION
 
@@ -100,6 +84,7 @@ static int w_is_em_registered(struct sip_msg *msg,char *str1,char *str2);
 static int w_add_em_path(struct sip_msg * msg, char* str1, char* str2);
 static int w_check_em_path(struct sip_msg * msg, char * str1, char * str2);
 
+static int fixup_domain(void** param, int param_no);
 static int fixup_380_alt_serv(void** param, int param_no);
 
 char* ecscf_uri = "";				/** the e-cscf uri*/
@@ -122,7 +107,7 @@ static cmd_export_t cmds[]={
 	{"emergency_serv_enabled",	w_emergency_serv_enabled,	0, 0, 0, REQUEST_ROUTE},
 	{"select_ecscf",			w_select_ecscf,				0, 0, 0, REQUEST_ROUTE},
 	{"enforce_sos_routes",		w_enforce_sos_routes,		0, 0, 0, REQUEST_ROUTE},
-	{"is_em_registered",		w_is_em_registered,			0, 0, 0, REQUEST_ROUTE},
+	{"is_em_registered",		w_is_em_registered,			0, fixup_domain, 0, REQUEST_ROUTE},
 	{"add_em_path",				w_add_em_path,				0, 0, 0, REQUEST_ROUTE},
 	{"check_em_path",			w_check_em_path,			0, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{0, 0, 0, 0, 0}
@@ -160,7 +145,7 @@ struct module_exports exports = {
 struct tm_binds tmb;					/**!< Structure with pointers to tm funcs		*/
 usrloc_api_t ul;						/**!< Structure containing pointers to usrloc functions*/ 
 sl_api_t slb;							/**!< SL API structure */ 
-
+p_registrar_api_t regapi; 				/**!< ims_registrar_pcscf API structure */
 /**
  * Fix the configuration parameters.
  */
@@ -311,6 +296,11 @@ static int mod_init(void)
 		return -1;
     }
 
+	/* load the IMS_REGISTRAR_PCSCF API */
+	if (registrar_load_api(&regapi) != 0) {                                                                                                                                                                                                                                   
+		LM_ERR("cannot load IMS_REGISTRAR_PCSCF API\n");
+		return -1;
+	}
 	/* register the RPC methods */                                                                                                     
     if(rpc_register_array(rpc_methods)!=0)                                                                                             
     {                                                                                                                                  
@@ -397,8 +387,8 @@ static int w_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2) {
 	return 1;
 }
 
-static int w_is_em_registered(struct sip_msg *msg,char *str1,char *str2) {
-	return 1;
+static int w_is_em_registered(struct sip_msg *msg, char *d, char *foo) {
+	return is_em_registered(msg, (udomain_t*)d);
 }
 
 static int w_add_em_path(struct sip_msg * msg, char* str1, char* str2) {
@@ -420,6 +410,21 @@ static int fixup_380_alt_serv(void** param, int param_no){
 	if(!str1 || str1[0] == '\0'){
 		LM_ERR("NULL reason");
 		return -1;
+	}
+	return 0;
+}
+
+/* fixups */                                                                                                                                                                                                                                                                   
+static int fixup_domain(void** param, int param_no)
+{
+	udomain_t* d;
+
+	if (param_no == 1) {
+		if (ul.register_udomain((char*)*param, &d) < 0) {
+			LM_ERR("failed to register domain\n");
+			return E_UNSPEC;
+		}
+		*param = (void*)d;
 	}
 	return 0;
 }

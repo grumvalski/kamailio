@@ -80,7 +80,7 @@ void clean_emergency_cntxt();
 
 int check_emergency_flag(struct sip_msg *msg);
 
-int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2);
+int is_em_registered(struct sip_msg* _m, udomain_t* _d);
 
 int P_enforce_sos_routes(struct sip_msg *msg, char* str1, char* str2);
 

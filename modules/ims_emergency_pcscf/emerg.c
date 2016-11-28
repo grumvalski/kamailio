@@ -67,6 +67,7 @@
 #include "emerg.h"
 
 extern struct tm_binds tmb;							/**< Structure with pointers to tm funcs			*/
+extern p_registrar_api_t regapi; 				    /**!< ims_registrar_pcscf API structure */
 extern char * ecscf_uri;
 extern int emerg_support;
 extern str ecscf_uri_str;
@@ -198,32 +199,21 @@ int check_emergency_flag(struct sip_msg *msg)
 /**
  * Finds if the message comes from an emergency registered UE at this P-CSCF
  * @param msg - the SIP message
- * @param str1 - the realm to look into
- * @param str2 - not used
+ * @param domain - the realm to look into
  * @returns #CSCF_RETURN_TRUE if registered, #CSCF_RETURN_FALSE if not 
  */
-int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2)
-{
+int is_em_registered(struct sip_msg* _m, udomain_t* _d) {                                                                                                                                                                                                                         
 	int ret=CSCF_RETURN_FALSE;
-	struct via_body *vb;
+	pcontact_t* contact;
 
-	LM_INFO("Looking if it has emergency registered\n");
+    contact = regapi.get_contactp(_m, _d, PCONTACT_REGISTERED);
+	if (contact == NULL) goto done;
 
-	vb = cscf_get_ue_via(msg);
+	if (contact->reg_type & EMERG_REG) ret=CSCF_RETURN_TRUE;
 
-	
-	if (vb->port==0) vb->port=5060;
-	LM_INFO("Looking for <%d://%.*s:%d>\n",
-		vb->proto,vb->host.len,vb->host.s,vb->port);
-	
-//	if (r_is_registered(vb->host,vb->port,vb->proto, EMERG_REG)) 
-//		ret = CSCF_RETURN_TRUE;
-//	else 
-//		ret = CSCF_RETURN_FALSE;	
-	
-	return ret;
+done:
+    return ret;
 }
-
 
 int select_ECSCF(str * ecscf_used){
 
