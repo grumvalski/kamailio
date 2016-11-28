@@ -67,6 +67,7 @@
 #include "async_reginfo.h"
 
 #include "reg_mod.h"
+#include "api.h"
 #include "save.h"
 #include "service_routes.h"
 MODULE_VERSION
@@ -149,7 +150,8 @@ static cmd_export_t cmds[] = {
 	{"pcscf_assert_identity",       (cmd_function)w_assert_identity,        2,  	assert_identity_fixup,  0,REQUEST_ROUTE },
 	{"pcscf_assert_called_identity",(cmd_function)w_assert_called_identity, 1,      assert_identity_fixup,  0,ONREPLY_ROUTE },
 	{"reginfo_handle_notify",       (cmd_function)w_reginfo_handle_notify,  1,      domain_fixup,           0,REQUEST_ROUTE},
-        {"pcscf_unregister",		(cmd_function)w_unregister,		4,      unregister_fixup,       0,ANY_ROUTE},
+    {"pcscf_unregister",		(cmd_function)w_unregister,		4,      unregister_fixup,       0,ANY_ROUTE},
+	{"bind_registrar",			(cmd_function)bind_registrar,	0,			0,		0,			0},
 	{0, 0, 0, 0, 0, 0}
 };
 
